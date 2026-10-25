@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="../EmulationTestProject/EmulationTests.csproj" Id="bf62a189-7277-4edf-abae-d122614eccce" />
+  <Project Path="Emulation.csproj" />
+</Solution>
