@@ -1,7 +1,7 @@
 ﻿using System.Windows;
 using System.Windows.Media;
 
-namespace Emulation
+namespace Emulation.Helpers
 {
     public static class VisualTreeExtensions
     {

@@ -4,6 +4,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:Emulation"
+         xmlns:help="clr-namespace:Emulation.Helpers"
         
         xmlns:vm="clr-namespace:Emulation.ViewModels"
         mc:Ignorable="d"
@@ -16,9 +17,27 @@
     </d:Window.DataContext>
 
     <Window.Resources>
+        <!--Пока не нужно, может быть в будущем--> 
+        <help:BindingProxy x:Key="VmProxy" Data="{help:WindowDataContextBinding}"/>
+        <!-- Единое меню для всех нод , через BindingProxy-->
+        <ContextMenu x:Key="_NodeContextMenu">
+            <MenuItem Header="Удалить"
+                  Command="{Binding Data.RemoveNodeCommand, Source={StaticResource VmProxy}}"
+                  CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+            <MenuItem Header="Клонировать"
+                  Command="{Binding Data.CloneNodeCommand, Source={StaticResource VmProxy}}"
+                  CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+        </ContextMenu>
 
-       
-
+        <!-- Единое меню для всех нод, через Tag и тогда BindingProxy не нужен-->
+        <ContextMenu x:Key="NodeContextMenu">
+            <MenuItem Header="Удалить"
+                Command="{Binding PlacementTarget.Tag.RemoveNodeCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+            <MenuItem Header="Клонировать"
+                  Command="{Binding PlacementTarget.Tag.CloneNodeCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                  CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+        </ContextMenu>
     </Window.Resources>
 
     <DockPanel LastChildFill="True">
@@ -58,9 +77,9 @@
                     </Style.Triggers>
                 </Style>
             </Grid.Style>
-            <!--Список узлов-->
-            <ItemsControl ItemsSource="{Binding Path=CurrentModel.Nodes}" ItemTemplate="{StaticResource NodeTemplate }"
-                          MouseLeftButtonDown="Node_MouseLeftButtonDown" SizeChanged="NodeBorder_SizeChanged">
+            <!--Список узлов  ItemTemplate="{StaticResource NodeTemplate }"-->
+            <ItemsControl ItemsSource="{Binding Path=CurrentModel.Nodes}" 
+                          MouseLeftButtonDown="Node_MouseLeftButtonDown">
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate>
                         <Canvas x:Name="NodeArea" ClipToBounds="True"  Background="Transparent"
@@ -73,6 +92,15 @@
                         <Setter Property="Canvas.Top" Value="{Binding Path=Location.Y}"/>
                     </Style>
                 </ItemsControl.ItemContainerStyle>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <ContentControl Content="{Binding}"
+                            ContentTemplate="{StaticResource NodeTemplate}"
+                            Tag="{Binding DataContext, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                            ContextMenu="{StaticResource NodeContextMenu}">
+                        </ContentControl>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
                 <!--<model:Node Location="10,20" Name="Test1"/>
                 <model:Node Location="90,30" Name="Test2"/>-->
             </ItemsControl>

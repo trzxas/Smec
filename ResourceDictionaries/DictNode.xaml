@@ -1,8 +1,10 @@
 ﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:help="clr-namespace:Emulation.Helpers" 
                     xmlns:models="clr-namespace:Emulation.Models" 
                     xmlns:sys="clr-namespace:System;assembly=System.Runtime"
                     >
+    <!--<help:BindingProxy x:Key="VmProxy" Data="{help:WindowDataContextBinding}"/>-->
 
     <DataTemplate x:Key="NodeTemplate" DataType="{x:Type models:Node}">
         <DataTemplate.Resources>
@@ -35,6 +37,20 @@
             <Border.Effect>
                 <DropShadowEffect BlurRadius="10" Color="#CCCCCC" Opacity="0.5" ShadowDepth="3"/>
             </Border.Effect>
+            
+            <!--<Border.ContextMenu>
+                <ContextMenu DataContext="{Binding Data, Source={StaticResource VmProxy}}">
+                    <MenuItem Header="Склонировать"
+                        Command="{Binding CloneNodeCommand}"
+                        CommandParameter="{Binding PlacementTarget.DataContext,
+                        RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                    <MenuItem Header="Удалить"
+                      Command="{Binding DeleteNodeCommand}"
+                      CommandParameter="{Binding PlacementTarget.DataContext,
+                      RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                </ContextMenu>
+            </Border.ContextMenu>-->
+            
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition/>
@@ -55,7 +71,8 @@
                 
                 
                 <!--Left side-->
-                <ItemsControl ItemsSource="{Binding LeftPorts}" Grid.Row="1" Grid.Column="0" VerticalAlignment="Center" HorizontalAlignment="Left" 
+                <ItemsControl ItemsSource="{Binding LeftPorts}" Grid.Row="0" Grid.Column="0" Grid.RowSpan="3"
+                              VerticalAlignment="Center" HorizontalAlignment="Left" 
                               ItemContainerStyle="{StaticResource VerticalLineContainerStyle}">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
@@ -73,7 +90,7 @@
                 </ItemsControl>
 
                 <!--Right side-->
-                <ItemsControl Name="RightSide" ItemsSource="{Binding RightPorts}" Grid.Row="1" Grid.Column="2" 
+                <ItemsControl Name="RightSide" ItemsSource="{Binding RightPorts}" Grid.Row="0" Grid.Column="2"  Grid.RowSpan="3"
                               VerticalAlignment="Center" HorizontalAlignment="Right" 
                               ItemContainerStyle="{StaticResource VerticalLineContainerStyle}">
                     <ItemsControl.ItemsPanel>

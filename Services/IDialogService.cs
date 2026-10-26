@@ -5,12 +5,14 @@ using System.Text;
 
 namespace Emulation.Services
 {
-    public interface IFileDialogService
+    public interface IDialogService
     {
         private const string strFilter= "Все файлы (*.*)|*.*";
 
         // Возвращает путь к файлу или null, если пользователь отменил выбор
         string? OpenFileDialog(string filter = strFilter);
         string? SaveFileDialog(string defaultExt = ".*", string filter = strFilter);
+
+        System.Windows.Media.Color? OpenColorDialog();
     }
 }

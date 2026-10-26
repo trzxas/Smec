@@ -123,10 +123,12 @@ namespace Emulation.ViewModels
         public RelayCommand ExitCommand { get; }
 
         public RelayCommand OptionsCommand { get; }
+        public RelayCommand CloneNodeCommand { get; }
+        public RelayCommand RemoveNodeCommand { get; }
 
         // Services
         private readonly IAppSettings _appSettings;
-        private readonly IFileDialogService _fileDialogService;
+        private readonly IDialogService _fileDialogService;
         private readonly IDataServiceFactory _serviceFactory;
 
         private readonly IMessageService _messageService;
@@ -148,7 +150,7 @@ namespace Emulation.ViewModels
         // Основной конструктор, который вызывает DI-контейнер
         public SysViewModel(
             IAppSettings appSettings,
-            IFileDialogService fileDialogService,
+            IDialogService fileDialogService,
             IDataServiceFactory serviceFactory,
             IMessageService messageService,
             IWindowService windowService)
@@ -169,6 +171,8 @@ namespace Emulation.ViewModels
             ExportCommand = new(ExportData, CanExecuteIfExist);
             ExitCommand = new(Exit);
             OptionsCommand = new(OpenColorDialog);
+            RemoveNodeCommand = new(RemoveNode);
+            CloneNodeCommand = new(CloneNode);
 
             // Настраиваем таймер автосохранения
             _autoSaveTimer = new DispatcherTimer
@@ -744,6 +748,18 @@ namespace Emulation.ViewModels
         //    changedNode.RightSideWidth = width;
         //}
 
+        private void RemoveNode(object? obj)
+        {
+            if (obj is not Node node) return;
+            CurrentModel?.Nodes.Remove(node);
+        }
+
+        private void CloneNode(object? obj)
+        {
+            if (obj is not Node node) return;
+            if (node.Clone() is Node cloneNode)
+                CurrentModel?.Nodes.Add(cloneNode);
+        }
 
         public async void Exit(object? obj)
         {
@@ -780,14 +796,10 @@ namespace Emulation.ViewModels
 
         private void OpenColorDialog(object? obj)
         {
-            // Создаем экземпляр WinForms диалога
-            using var dialog = new System.Windows.Forms.ColorDialog();
-            if (dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+            Color? wpfColor=_fileDialogService.OpenColorDialog();
+            if (wpfColor!=null)
             {
-                // Конвертируем цвет из System.Drawing.Color в System.Windows.Media.Color
-                Color wpfColor = Color.FromArgb(dialog.Color.A, dialog.Color.R, dialog.Color.G, dialog.Color.B);
-
-                CurrentGridBrush = new SolidColorBrush(wpfColor);
+                CurrentGridBrush = new SolidColorBrush((Color)wpfColor);
             }
         }
 

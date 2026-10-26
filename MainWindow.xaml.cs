@@ -1,4 +1,5 @@
-﻿using Emulation.Models;
+﻿using Emulation.Helpers;
+using Emulation.Models;
 using Emulation.ViewModels;
 using System.ComponentModel;
 using System.Windows;
@@ -33,20 +34,20 @@ namespace Emulation
             }
         }
 
-        private void NodeBorder_SizeChanged(object sender, SizeChangedEventArgs e)
-        {
-            if (e.OriginalSource is DependencyObject control)
-            {
-                // Находим главный контрол Node
-                Border? mainControl = control.FindAncestor<Border>("MainNodeControl");
-                if (mainControl != null && mainControl.DataContext is Node node && this.DataContext is SysViewModel viewModel)
-                {
-                    //viewModel.OnResizeNodeControl(node, e.NewSize.Width);
-                    node.RightSideWidth = e.NewSize.Width;
+        //private void NodeBorder_SizeChanged(object sender, SizeChangedEventArgs e)
+        //{
+        //    if (e.OriginalSource is DependencyObject control)
+        //    {
+        //        // Находим главный контрол Node
+        //        Border? mainControl = control.FindAncestor<Border>("MainNodeControl");
+        //        if (mainControl != null && mainControl.DataContext is Node node && this.DataContext is SysViewModel viewModel)
+        //        {
+        //            //viewModel.OnResizeNodeControl(node, e.NewSize.Width);
+        //            //node.RightSideWidth = e.NewSize.Width;
 
-                }
-            }
-        }
+        //        }
+        //    }
+        //}
 
 
     }

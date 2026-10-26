@@ -39,7 +39,7 @@ namespace Emulation
             // 3.Другие сервисы (Фабрика и инфраструктура)
             serviceCollection.AddSingleton<IDataServiceFactory, DataServiceFactory>();
             serviceCollection.AddSingleton<IAppSettings, AppSettings>();
-            serviceCollection.AddSingleton<IFileDialogService, FileDialogService>();
+            serviceCollection.AddSingleton<IDialogService, DialogService>();
             serviceCollection.AddSingleton<IMessageService, MessageService>();
             serviceCollection.AddSingleton<IWindowService, WindowService>();
 

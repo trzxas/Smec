@@ -1,9 +1,4 @@
-﻿using Emulation;
-using Emulation.Models;
-using Emulation.Services.DataServices;
-using MongoDB.Bson.Serialization.Attributes;
-using System;
-using System.Collections.Generic;
+﻿using MongoDB.Bson.Serialization.Attributes;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.Text.Json.Serialization;
@@ -11,7 +6,7 @@ using System.Xml.Serialization;
 
 namespace Emulation.Models
 {
-    public class Node : NamedBase
+    public class Node : NamedBase, ICloneable
     {
         //[JsonConverter(typeof(CompactPointConverter))]
         public System.Windows.Point Location { get; set { field = value; OnPropertyChanged(); } }
@@ -134,6 +129,20 @@ namespace Emulation.Models
                 }
                 SerializedPorts.Clear(); // Чистим буфер
             }
+        }
+
+        public object Clone()
+        {
+            var clone = new Node()
+            {
+                Name = $"{Name}_copy",
+                Location = new System.Windows.Point(Location.X + 16, Location.Y + 16)
+            };
+            foreach (var item in this.Ports)
+            {
+                clone.Ports.Add(item);
+            }
+            return clone;
         }
     }
 }

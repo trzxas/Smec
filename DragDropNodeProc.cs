@@ -1,4 +1,5 @@
-﻿using Emulation.Models;
+﻿using Emulation.Helpers;
+using Emulation.Models;
 using Emulation.ViewModels;
 using System;
 using System.Collections.Generic;

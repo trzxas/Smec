@@ -4,7 +4,7 @@ using System.Text;
 using System.Windows;
 using System.Windows.Markup;
 
-namespace Emulation
+namespace Emulation.Helpers
 {
     //    Как это работает:
     //1. Парсер XAML видит local:WindowDataContextBinding Path=Name и создает объект класса через конструктор по умолчанию(без параметров).
