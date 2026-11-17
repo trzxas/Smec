@@ -356,7 +356,7 @@
                     </Grid.LayoutTransform>
 
                     <!-- СЛОЙ ПРОВОДОВ (размещается в WorkGrid ПЕРЕД NodesListBox, чтобы компоненты перекрывали концы проводов) -->
-                    <ListBox x:Name="LinksListBox"
+                    <ListBox x:Name="LinksLayer"
                                     ItemsSource="{Binding Links}"
                                     SelectionMode="Extended"
                                     Background="Transparent"
@@ -418,7 +418,7 @@
                     </ListBox>
 
                     <!-- Слой узловых точек (сварки) в местах разветвления проводов -->
-                    <ItemsControl ItemsSource="{Binding Junctions}" IsHitTestVisible="False">
+                    <ItemsControl Name="JunctionPointsLayer" ItemsSource="{Binding Junctions}" IsHitTestVisible="False">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
                                 <Canvas />

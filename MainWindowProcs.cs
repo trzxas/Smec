@@ -109,7 +109,7 @@ namespace Smec
             if (Keyboard.Modifiers == ModifierKeys.None)
             {
                 ComponentsLayer.SelectedItems.Clear();
-                LinksListBox.SelectedItems.Clear();
+                LinksLayer.SelectedItems.Clear();
             }
 
             // 2. Запускаем рисование рамки выделения (SelectionBox)
@@ -273,7 +273,7 @@ namespace Smec
 
             // 2. Иначе — это клик по самому компоненту (NodeVm)
             if (Keyboard.Modifiers == ModifierKeys.None)
-                LinksListBox.SelectedItems.Clear();
+                LinksLayer.SelectedItems.Clear();
 
             _dragStartPoint = me.GetPosition(null);
 
@@ -467,7 +467,7 @@ namespace Smec
                 ComponentsLayer.SelectedItems.Clear();
             }
 
-            LinksListBox.Focus();
+            LinksLayer.Focus();
         }
 
         private void LinksListBox_PreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)
@@ -480,14 +480,14 @@ namespace Smec
             }
 
             // Ищем ListBoxItem того провода, по которому кликнули ПКМ
-            if (e.OriginalSource is DependencyObject clicked && LinksListBox.ContainerFromElement(clicked) is ListBoxItem item)
+            if (e.OriginalSource is DependencyObject clicked && LinksLayer.ContainerFromElement(clicked) is ListBoxItem item)
             {
                 // Если кликнули по НЕвыделенному проводу — сбрасываем старое выделение и выделяем только этот провод.
                 // Если же кликнули по одному из УЖЕ выделенной группы проводов — оставляем группу выделенной, чтобы удалить её целиком!
                 if (!item.IsSelected)
                 {
                     ComponentsLayer.SelectedItems.Clear();
-                    LinksListBox.SelectedItems.Clear();
+                    LinksLayer.SelectedItems.Clear();
                     item.IsSelected = true;
                 }
             }
@@ -643,9 +643,9 @@ namespace Smec
             }
 
             // 2. Выделение ПРОВОДОВ (достаточно задеть рамкой любой отрезок провода)
-            foreach (var item in LinksListBox.Items)
+            foreach (var item in LinksLayer.Items)
             {
-                if (LinksListBox.ItemContainerGenerator.ContainerFromItem(item) is ListBoxItem container && item is LinkVm linkVm)
+                if (LinksLayer.ItemContainerGenerator.ContainerFromItem(item) is ListBoxItem container && item is LinkVm linkVm)
                 {
                     bool isHit = IsLinkIntersectingRect(linkVm.ScreenPoints, selectionRect);
 

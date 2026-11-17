@@ -25,7 +25,7 @@ namespace Smec
             _viewModel.RequestClearSelection += () =>
             {
                 ComponentsLayer.SelectedItems.Clear();
-                LinksListBox.SelectedItems.Clear();
+                LinksLayer.SelectedItems.Clear();
             };
 
             _viewModel.RequestSelectNodes += nodesToSelect =>

@@ -42,22 +42,22 @@ namespace Smec.Models
         /// <summary>
         /// Угол поворота элемента в градусах (0, 90, 180, 270).
         /// </summary>
-        public int Rotation { get; set; }
+        public int Rotation { get; set => SetProperty(ref field, value);  }
 
         /// <summary>
         /// Зеркальное отражение по горизонтали (по оси X).
         /// </summary>
-        public bool MirrorX { get; set; }
+        public bool MirrorX { get; set => SetProperty(ref field, value); }
 
         /// <summary>
         /// Зеркальное отражение по вертикали (по оси Y).
         /// </summary>
-        public bool MirrorY { get; set; }
+        public bool MirrorY { get; set => SetProperty(ref field, value); }
 
         /// <summary>
         /// Порядок отрисовки (слой перекрытия элементов на 2D-холсте).
         /// </summary>
-        public int ZIndex { get; set; }
+        public int ZIndex { get; set => SetProperty(ref field, value); }
 
 
         // Каждый наследник (ResistorNode, CapacitorNode и т.д.) переопределяет только букву
@@ -84,8 +84,8 @@ namespace Smec.Models
         // Удобное свойство для проверки, присвоен ли узлу реальный номер или он еще дефолтный
         public bool IsDefaultDesignator => Designator == $"{DefaultPrefix}?";
 
-        
-       
+
+
         /// <summary>
         /// Номинал или значение элемента (например: "10k", "100n", "5V", "GND").
         /// </summary>
@@ -94,6 +94,7 @@ namespace Smec.Models
         /// <summary>
         /// Дополнительные параметры (например, для SPICE-моделей, частоты генератора или пользовательских полей).
         /// </summary>
+        //TODO Пока никак не использовался!
         public Dictionary<string, string> Properties { get; set; } = [];
 
 
@@ -333,6 +334,7 @@ namespace Smec.Models
             target.Location = new GridPoint(Location.X + 2, Location.Y + 2);
             target.Designator = string.Empty;
             target.Value = Value;
+            target.Properties = new Dictionary<string, string>(Properties);
 
             target.Ports.Clear(); // На всякий случай, хотя Node создается без портов 
             foreach (var port in Ports)
