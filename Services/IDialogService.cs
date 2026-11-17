@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Net.Http;
 using System.Text;
 
-namespace Emulation.Services
+namespace Smec.Services
 {
     public interface IDialogService
     {

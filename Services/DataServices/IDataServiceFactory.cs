@@ -2,12 +2,11 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Emulation.Services
+namespace Smec.Services.DataServices
 {
-    using Emulation.Models;
-    using Emulation.Services.DataServices;
-    using Emulation.ViewModels;
     using Microsoft.Extensions.DependencyInjection;
+    using Smec.Models;
+    using Smec.ViewModels;
     using System;
     using System.IO;
 

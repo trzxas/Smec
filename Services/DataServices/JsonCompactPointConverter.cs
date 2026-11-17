@@ -5,9 +5,9 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Point = System.Windows.Point;
 
-namespace Emulation.Services.DataServices
+namespace Smec.Services.DataServices
 {
-    public class CompactPointConverter : JsonConverter<Point>
+    public class JsonCompactPointConverter : JsonConverter<Point>
     {
         public override System.Windows.Point Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
         {

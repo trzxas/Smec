@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Windows;
 
-namespace Emulation.Helpers
+namespace Smec.Infrastructure
 {
     public class BindingProxy : Freezable
     {

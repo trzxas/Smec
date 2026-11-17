@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Emulation.Services
+namespace Smec.Services
 {
     public interface IAppSettings
     {

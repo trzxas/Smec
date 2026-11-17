@@ -5,7 +5,7 @@ using System.Text;
 using System.Windows.Media;
 
 
-namespace Emulation.Services
+namespace Smec.Services
 {
     public class DialogService : IDialogService
     {

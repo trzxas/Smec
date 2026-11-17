@@ -1,12 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using System.Runtime.CompilerServices;
-using System.Text;
+using System.Runtime.Serialization;
 
-namespace Emulation.Models
+namespace Smec.Models
 {
-    public class Base : INotifyPropertyChanged
+    [DataContract]
+    public class ObservableObject : INotifyPropertyChanged
     {
         public event PropertyChangedEventHandler? PropertyChanged;
         public void OnPropertyChanged([CallerMemberName] string? prop = "")

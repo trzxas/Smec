@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Emulation.Services
+namespace Smec.Services
 {
     // Реалізація, яка читає дані з Properties.Settings або App.xaml.cs
     public class AppSettings : IAppSettings
