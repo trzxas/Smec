@@ -90,6 +90,7 @@
                     <Style TargetType="ContentPresenter">
                         <Setter Property="Canvas.Left" Value="{Binding Path=Location.X}"/>
                         <Setter Property="Canvas.Top" Value="{Binding Path=Location.Y}"/>
+
                     </Style>
                 </ItemsControl.ItemContainerStyle>
                 <ItemsControl.ItemTemplate>
