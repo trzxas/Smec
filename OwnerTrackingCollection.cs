@@ -1,19 +1,23 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
 using System.Collections.ObjectModel;
+using System.Runtime.Serialization;
+using System.Text;
 
-namespace Emulation
+namespace Smec
 {
+   
     public class OwnerTrackingCollection<T, P> : ObservableCollection<T> where T : IOwnable<P>
     {
         private readonly P _owner;
 
+        
         public OwnerTrackingCollection(P owner)
         {
             // Добавили проверку на null, чтобы защитить код от непредвиденных ошибок
             _owner = owner ?? throw new ArgumentNullException(nameof(owner));
         }
+
 
         // Срабатывает при .Add() и .Insert()
         protected override void InsertItem(int index, T item)

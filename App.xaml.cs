@@ -1,13 +1,11 @@
-﻿using Emulation.Models;
-using Emulation.Services;
-using Emulation.Services.DataServices;
-using Emulation.ViewModels;
-using Microsoft.Extensions.DependencyInjection;
-using System.Configuration;
-using System.Data;
+﻿using Microsoft.Extensions.DependencyInjection;
+using Smec.Models;
+using Smec.Services;
+using Smec.Services.DataServices;
+using Smec.ViewModels;
 using System.Windows;
 
-namespace Emulation
+namespace Smec
 {
     /// <summary>
     /// Interaction logic for App.xaml
@@ -21,8 +19,6 @@ namespace Emulation
             base.OnStartup(e);
 
             var serviceCollection = new ServiceCollection();
-
-
 
             // Регистрируем сервисы данных
 
@@ -43,12 +39,18 @@ namespace Emulation
             serviceCollection.AddSingleton<IMessageService, MessageService>();
             serviceCollection.AddSingleton<IWindowService, WindowService>();
 
-            // 4. Окна и модели
+            // 4.Регистрируем настройки сетки и библиотеку символов
+            serviceCollection.AddSingleton<GridSettings>();
+            serviceCollection.AddSingleton<SymbolLibrary>();
+
+            // 5. Окна и модели
             serviceCollection.AddTransient<SysViewModel>(); // <--бизнес-логика (ViewModel)
             serviceCollection.AddTransient<MainWindow>();// <-- Само окно (View) как Transient-элемент
 
             // Строим контейнер
             ServiceProvider = serviceCollection.BuildServiceProvider();
+
+
 
 
             // Запрашиваем из контейнера САМО ОКНО.

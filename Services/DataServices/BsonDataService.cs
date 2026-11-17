@@ -6,7 +6,7 @@ using System.IO;
 using System.Text;
 using System.Text.Json;
 
-namespace Emulation.Services.DataServices
+namespace Smec.Services.DataServices
 {
     public class BsonDataService<T> : IDataService<T> where T : class 
     {

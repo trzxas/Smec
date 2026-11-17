@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Emulation.Services.DataServices
+namespace Smec.Services.DataServices
 {
     public interface IDataService<T> where T : class
     {

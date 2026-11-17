@@ -1,24 +1,51 @@
-﻿using Emulation.Helpers;
-using Emulation.Models;
-using Emulation.ViewModels;
+﻿using Smec.Adorners;
+using Smec.ViewModels;
 using System.ComponentModel;
 using System.Windows;
-using System.Windows.Controls;
+using System.Windows.Documents;
+using System.Windows.Input;
 
-namespace Emulation
+namespace Smec
 {
     /// <summary>
     /// Interaction logic for MainWindow.xaml
     /// </summary>
     public partial class MainWindow : Window
     {
+        private readonly SysViewModel _viewModel;
+        private NodeDragAdorner? _dragAdorner;
+        private AdornerLayer? _adornerLayer;
+
         // Внедрение зависимости прямо в конструктор окна
         public MainWindow(SysViewModel viewModel)
         {
             InitializeComponent();
+            _viewModel = viewModel;
+
+            _viewModel.RequestClearSelection += () =>
+            {
+                ComponentsLayer.SelectedItems.Clear();
+                LinksListBox.SelectedItems.Clear();
+            };
+
+            _viewModel.RequestSelectNodes += nodesToSelect =>
+            {
+                ComponentsLayer.SelectedItems.Clear();
+                foreach (var node in nodesToSelect)
+                {
+                    ComponentsLayer.SelectedItems.Add(node);
+                }
+            };
 
             // Задаем DataContext для связывания (Binding) в XAML
             DataContext = viewModel;
+
+            // Вызывать внутри Window или любого элемента, уже добавленного в визуальное дерево
+            //DpiScale dpiScale = VisualTreeHelper.GetDpi(this);
+
+            //double dpiX = dpiScale.PixelsPerInchX; // Например, 96, 120 или 144
+            //double dpiY = dpiScale.PixelsPerInchY;
+            //double scaleFactor = dpiScale.DpiScaleX; // Множитель масштаба (1.0, 1.25, 1.5 и т
         }
 
         // Обработка событий окна
@@ -26,29 +53,29 @@ namespace Emulation
         // Этот метод сработает при нажатии на закрытие окна
         private void Window_Closing(object sender, CancelEventArgs e)
         {
-            // Достаем нашу ViewModel из DataContext
-            if (DataContext is SysViewModel viewModel)
-            {
-                // Напрямую вызываем метод ViewModel и передаем туда аргументы события
-                viewModel.Exit(e);
-            }
+            // Напрямую вызываем метод ViewModel и передаем туда аргументы события
+            _viewModel.Exit(e);
         }
 
-        //private void NodeBorder_SizeChanged(object sender, SizeChangedEventArgs e)
-        //{
-        //    if (e.OriginalSource is DependencyObject control)
-        //    {
-        //        // Находим главный контрол Node
-        //        Border? mainControl = control.FindAncestor<Border>("MainNodeControl");
-        //        if (mainControl != null && mainControl.DataContext is Node node && this.DataContext is SysViewModel viewModel)
-        //        {
-        //            //viewModel.OnResizeNodeControl(node, e.NewSize.Width);
-        //            //node.RightSideWidth = e.NewSize.Width;
 
-        //        }
-        //    }
-        //}
+        private void Window_SelectAll_Executed(object sender, ExecutedRoutedEventArgs e)
+        {
+            ComponentsLayer.SelectAll();
+        }
+        private void Window_SelectAll_CanExecute(object sender, CanExecuteRoutedEventArgs e)
+        {
+            e.CanExecute = ComponentsLayer?.Items.Count > 0;
+        }
 
+       
 
+        
+        
+
+        
+
+        
+
+       
     }
 }

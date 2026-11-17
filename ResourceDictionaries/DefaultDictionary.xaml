@@ -1,0 +1,479 @@
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+                    xmlns:sys="clr-namespace:System;assembly=System.Runtime"
+                    xmlns:help="clr-namespace:Smec.Helpers" 
+                    xmlns:models="clr-namespace:Smec.Models"
+                    xmlns:vm="clr-namespace:Smec.ViewModels"
+                    xmlns:infra="clr-namespace:Smec.Infrastructure"
+                    xmlns:cc="clr-namespace:Smec.CustomControls"
+                    xmlns:cv="clr-namespace:Smec.Converters"
+                    xmlns:po="http://schemas.microsoft.com/winfx/2006/xaml/presentation/options"
+                    
+                    mc:Ignorable="po"
+                    >
+
+    <!--<help:BindingProxy x:Key="VmProxy" Data="{help:WindowDataContextBinding}"/>-->
+    <cv:SideEnumToGridConverter x:Key="EnumSideConverter"/>
+    <cv:EnumToBoolConverter x:Key="EnumToBoolConverter" />
+    <BooleanToVisibilityConverter x:Key="BoolToVis" />
+
+
+    <!-- 1. Два экземпляра универсального селектора (порядок в файле любой, так как ключи передаются строкой) -->
+    <infra:HybridNodeTemplateSelector x:Key="NodeTemplateSelector"
+                                      TargetMode="FullNode"
+                                      FallbackTemplateKey="NodeTemplate" />
+
+    <infra:HybridNodeTemplateSelector x:Key="BodyTemplateSelector"
+                                      TargetMode="BodyOnly"
+                                      FallbackTemplateKey="DefaultBodyTemplate" />
+
+
+    <sys:Double x:Key="PinLen">6.0</sys:Double>
+    <sys:Double x:Key="nPinLen">-6.0</sys:Double>
+
+    <SolidColorBrush x:Key="DefaultBrush" Color="Gray" po:Freeze="True"/>
+    <SolidColorBrush x:Key="LowBrush" Color="Navy" po:Freeze="True"/>
+    <SolidColorBrush x:Key="PosBrush" Color="HotPink" po:Freeze="True"/>
+    <SolidColorBrush x:Key="NegBrush" Color="Blue" po:Freeze="True"/>
+
+    <SolidColorBrush x:Key="NormalBrush" Color="DodgerBlue" po:Freeze="True"/>
+    <SolidColorBrush x:Key="WarningBrush" Color="DarkOrange" po:Freeze="True"/>
+    <SolidColorBrush x:Key="ErrorBrush" Color="Red" po:Freeze="True"/>
+
+    <!-- Геометрия стрелки в XAML -->
+    <StreamGeometry x:Key="ArrowGeometry">
+        M 1,1 L 1,18 L 5,14 L 8,21 L 11,20 L 8,13 L 13,13 Z
+    </StreamGeometry>
+
+    <!-- Готовый курсор в ресурсах XAML (можно менять цвета, контур и размер прямо в XAML!) -->
+    <cc:VectorCursor x:Key="GreenArrowCursor"
+                 Geometry="{StaticResource ArrowGeometry}"
+                 Fill="LimeGreen"
+                 Stroke="#003C00"
+                 StrokeThickness="1.2"
+                 Size="24"
+                 HotSpotX="0"
+                 HotSpotY="0" />
+
+    
+    <!-- Тонкий прицел с точкой в центре (HotSpot строго в центре 12, 12!) -->
+    <StreamGeometry x:Key="CenterCrosshairGeometry">
+        M 12,2 L 12,8 M 12,16 L 12,22 M 2,12 L 8,12 M 16,12 L 22,12 M 9,12 A 3,3 0 1 1 15,12 A 3,3 0 1 1 9,12
+    </StreamGeometry>
+
+    <cc:VectorCursor x:Key="CenterCrosshairCursor"
+                 Geometry="{StaticResource CenterCrosshairGeometry}"
+                 Fill="Transparent"
+                 Stroke="LimeGreen"
+                 StrokeThickness="1.5"
+                 Size="24"
+                 HotSpotX="12"
+                 HotSpotY="12" />
+
+    <!-- Идеально симметричный прицел 25x25 с центром строго в пикселе (12, 12) -->
+    <StreamGeometry x:Key="CrosshairGeometry">
+        M 12,2 L 12,8 M 12,16 L 12,22 M 2,12 L 8,12 M 16,12 L 22,12 M 9,12 A 3,3 0 1 1 15,12 A 3,3 0 1 1 9,12
+    </StreamGeometry>
+
+    <cc:VectorCursor x:Key="CrosshairCursor"
+                 Geometry="{StaticResource CrosshairGeometry}"
+                 Fill="Transparent"
+                 Stroke="#008F11"
+                 StrokeThickness="1.5"
+                 Size="25"
+                 HotSpotX="12"
+                 HotSpotY="12" />
+
+
+
+    <StreamGeometry x:Key="PlugArrowGeometry">
+        M 1,1 L 1,15 L 4.5,11.5 L 7,17 L 9,16 L 6.5,10.5 L 11,10.5 Z
+    M 11,18 L 15,18 L 15,14 L 20,14
+    M 18.5,14 A 1.5,1.5 0 1 1 21.5,14 A 1.5,1.5 0 1 1 18.5,14
+    </StreamGeometry>
+
+    <cc:VectorCursor x:Key="PlugArrowCursor"
+                 Geometry="{StaticResource PlugArrowGeometry}"
+                 Fill="LimeGreen"
+                 Stroke="#003C00"
+                 StrokeThickness="1.2"
+                 Size="24"
+                 HotSpotX="0"
+                 HotSpotY="0" />
+
+    <StreamGeometry x:Key="PencilGeometry">
+        M 2,22 L 3,16 L 16,3 L 21,8 L 8,21 Z M 14,5 L 19,10
+    </StreamGeometry>
+
+    <cc:VectorCursor x:Key="PencilCursor"
+                 Geometry="{StaticResource PencilGeometry}"
+                 Fill="Gold"
+                 Stroke="Black"
+                 StrokeThickness="1.2"
+                 Size="24"
+                 HotSpotX="2"
+                 HotSpotY="22" />
+
+
+    <!-- Стиль линии порта -->
+    <Style x:Key="PortLineStyle" TargetType="Shape">
+        <Setter Property="Stroke" Value="{StaticResource DefaultBrush}"/>
+        <Setter Property="StrokeThickness" Value="1"/>
+        <Setter Property="StrokeEndLineCap" Value="Round"/>
+        <Setter Property="ToolTip" Value="{Binding Name}"/>
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding State}" Value="Low">
+                <Setter Property="Stroke" Value="{StaticResource LowBrush}"/>
+            </DataTrigger>
+            <DataTrigger Binding="{Binding State}" Value="Pos">
+                <Setter Property="Stroke" Value="{StaticResource PosBrush}"/>
+            </DataTrigger>
+            <DataTrigger Binding="{Binding State}" Value="Neg">
+                <Setter Property="Stroke" Value="{StaticResource NegBrush}"/>
+            </DataTrigger>
+            <DataTrigger Binding="{Binding State}" Value="Error">
+                <Setter Property="Stroke" Value="{StaticResource ErrorBrush}"/>
+            </DataTrigger>
+
+            <!-- Лёгкая подсветка при простом наведении мыши (до нажатия кнопки) -->
+            <DataTrigger Binding="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=Canvas}}" Value="True">
+                <Setter Property="StrokeThickness" Value="3"/>
+                <Setter Property="Stroke" Value="{StaticResource NormalBrush}"/>
+            </DataTrigger>
+
+
+            <!-- Подсветка обычного совместимого порта -->
+            <DataTrigger Binding="{Binding HighlightStatus}" Value="Normal">
+                <Setter Property="StrokeThickness" Value="3"/>
+                <Setter Property="Stroke" Value="{StaticResource NormalBrush}"/>
+            </DataTrigger>
+
+            <!-- Предупреждающая подсветка при соединении двух Out-портов -->
+            <DataTrigger Binding="{Binding HighlightStatus}" Value="Warning">
+                <Setter Property="StrokeThickness" Value="3"/>
+                <Setter Property="Stroke" Value="{StaticResource WarningBrush}"/>
+            </DataTrigger>
+
+        </Style.Triggers>
+    </Style>
+
+
+   
+
+    <DataTemplate x:Key="CircleDecorator">
+        <Ellipse Width="4" Height="4" 
+         Fill="White"
+         Stroke="{Binding (TextElement.Foreground), RelativeSource={RelativeSource AncestorType=ContentPresenter}}" 
+         StrokeThickness="1" 
+         Margin="0 -2"/>
+    </DataTemplate>
+
+    <DataTemplate x:Key="SlashDecorator">
+        <Line X1="2" X2="-2" Y1="-2" Y2="2" 
+      Stroke="{Binding (TextElement.Foreground), RelativeSource={RelativeSource AncestorType=ContentPresenter}}" 
+      StrokeThickness="1"/>
+    </DataTemplate>
+
+    <DataTemplate x:Key="BackSlashDecorator">
+        <Line X1="-2" X2="2" Y1="-2" Y2="2" 
+      Stroke="{Binding (TextElement.Foreground), RelativeSource={RelativeSource AncestorType=ContentPresenter}}" 
+      StrokeThickness="1"/>
+    </DataTemplate>
+
+    <DataTemplate x:Key="ArrowDecorator">
+        <Path Data="M 0 0 L 4 2 L 0 4 Z" 
+      Margin="0 -2" 
+      Fill="{Binding (TextElement.Foreground), RelativeSource={RelativeSource AncestorType=ContentPresenter}}"/>
+    </DataTemplate>
+
+
+    <!-- Стили для Components -->
+    <Style x:Key="ComponentBodyStyle" TargetType="Path">
+        <Setter Property="Stroke" Value="{StaticResource DefaultBrush}" />
+        <Setter Property="StrokeThickness" Value="1" />
+
+        <!-- Полупрозрачная заливка корпуса (~70% непрозрачности): слегка приглушает сетку, 
+         оставляет корпус кликабельным по всей площади и позволяет видеть спрятанные под ним провода/детали -->
+        <Setter Property="Fill" Value="#B0FFFFFF" />
+
+        <Setter Property="SnapsToDevicePixels" Value="True" />
+        <Setter Property="UseLayoutRounding" Value="True" />
+        <Setter Property="StrokeLineJoin" Value="Round" />
+        <Setter Property="StrokeStartLineCap" Value="Round" />
+        <Setter Property="StrokeEndLineCap" Value="Round" />
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                <Setter Property="Stroke" Value="DodgerBlue" />
+                <Setter Property="StrokeThickness" Value="1.8" />
+            </DataTrigger>
+            <DataTrigger Binding="{Binding IsFilled}" Value="False">
+                <Setter Property="Fill" Value="{x:Null}" />
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+
+    <!-- 2. Стандартный векторный корпус (для всех обычных деталей) -->
+    <DataTemplate x:Key="DefaultBodyTemplate" DataType="{x:Type vm:NodeVm}">
+        <Path Data="{Binding BodyGeometry}" Style="{StaticResource ComponentBodyStyle}" />
+    </DataTemplate>
+
+
+    <!-- 3. Основной шаблон компонента на рабочем холсте (корень в центре (0, 0)) -->
+    <DataTemplate x:Key="NodeTemplate" DataType="{x:Type vm:NodeVm}">
+        <Canvas>
+            <!-- СЛОЙ А: Вращаемая часть (HitBox, Корпус/Кастомное тело и Пины) -->
+            <Canvas x:Name="RotatableGraphics" RenderTransform="{Binding GraphicsTransform}">
+
+                <!-- Невидимая зона захвата мышкой (HitBox) -->
+                <Rectangle Canvas.Left="{Binding HitBoxX}" Canvas.Top="{Binding HitBoxY}"
+                       Width="{Binding HitBoxWidth}" Height="{Binding HitBoxHeight}"
+                       Fill="Transparent" />
+
+                <!-- Отображение корпуса (стандартный Path или кастомный WPF DataTemplate) -->
+                <ContentControl Content="{Binding}"
+                            ContentTemplateSelector="{StaticResource BodyTemplateSelector}" />
+
+                <!-- Пины компонента (всегда поверх корпуса и HitBox) -->
+                <ItemsControl ItemsSource="{Binding Pins}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <Canvas />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Canvas Background="Transparent">
+
+                                <!-- Основная линия вывода -->
+                                <Line X1="{Binding X1}" Y1="{Binding Y1}" X2="{Binding X2}" Y2="{Binding Y2}"
+                                    Style="{StaticResource PortLineStyle}" />
+
+                                <!-- Декоратор (кружок инверсии, слэш или стрелка CLK) -->
+                                <Path Data="{Binding DecoratorGeometry}"
+                                        Fill="{DynamicResource WorkspaceBackgroundBrush}"
+                                        Style="{StaticResource PortLineStyle}"
+                                        IsHitTestVisible="False" />
+
+                                <!-- Невидимая зона захвата 12x12 px строго по центру кончика пина (X2, Y2) -->
+                                <Ellipse Canvas.Left="{Binding X2}"
+                                            Canvas.Top="{Binding Y2}"
+                                            Width="12"
+                                            Height="12"
+                                            Margin="-4,-4,0,0"
+                                            Fill="Transparent" />
+                            </Canvas>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </Canvas>
+
+            <!-- СЛОЙ Б: Неповорачиваемые надписи (знак функции, Designator, Value) -->
+            <Canvas x:Name="NonRotatableLabels">
+               
+                <!-- Знак функции ("≥1", "&", "=1", "G", "?") -->
+                <Border Canvas.Left="{Binding FuncBoxX}" Canvas.Top="{Binding FuncBoxY}"
+                    Width="{Binding FuncBoxWidth}" Height="{Binding FuncBoxHeight}"
+                    ClipToBounds="False"
+                    Visibility="{Binding HasFunctionText, Converter={StaticResource BoolToVis}}">
+                    <TextBlock Text="{Binding FunctionText}"
+                           FontSize="{Binding FunctionFontSize}"
+                           Foreground="{StaticResource DefaultBrush}"
+                           HorizontalAlignment="Center" VerticalAlignment="{Binding FunctionVerticalAlignment}"
+                           TextAlignment="Center" />
+                </Border>
+
+                <!-- Позиционное обозначение (D1, R1) — скрывается на иконках палитры через ShowLabels -->
+                <TextBlock Text="{Binding Designator}"
+                       Canvas.Left="{Binding DesignatorOffsetX}"
+                       Canvas.Top="{Binding DesignatorOffsetY}"
+                       Visibility="{Binding ShowDesignator, Converter={StaticResource BoolToVis}}"
+                       FontFamily="Consolas" FontSize="10" Foreground="DarkBlue" />
+
+                <!-- Номинал / Значение (10 Гц, 10k) — скрывается на иконках палитры через ShowLabels -->
+                <TextBlock Text="{Binding Value}"
+                       Canvas.Left="{Binding ValueOffsetX}"
+                       Canvas.Top="{Binding ValueOffsetY}"
+                       Visibility="{Binding ShowValue, Converter={StaticResource BoolToVis}}"
+                       FontFamily="Consolas" FontSize="8" Foreground="Black" />
+            </Canvas>
+        </Canvas>
+    </DataTemplate>
+
+    <!-- 4. Строка элемента в списке StockListBox -->
+    <DataTemplate x:Key="StockNodeTemplate" DataType="{x:Type vm:NodeVm}">
+        <TextBlock Text="{Binding Model.CategoryName}"
+               ToolTip="{Binding Model.Description}"
+               HorizontalAlignment="Center"
+               Margin="4" />
+    </DataTemplate>
+
+    <!-- 5. Крупное превью выбранного элемента сверху в боковой панели -->
+    <DataTemplate x:Key="StockNodeIcon" DataType="{x:Type vm:NodeVm}">
+        <Border Name="MainStockControl" Background="Transparent" KeyboardNavigation.TabNavigation="None"
+            HorizontalAlignment="Center" VerticalAlignment="Bottom">
+            <StackPanel>
+                <!-- Контейнер с точными габаритами детали и сдвигом центра (0, 0) в середину для Viewbox -->
+                <!-- Отступ сверху 14 px, чтобы Designator над корпусом полностью помещался в Viewbox -->
+                <Canvas Width="{Binding TotalWidth}" Height="{Binding TotalHeight}" 
+                        Margin="0,14,0,0" 
+                        HorizontalAlignment="Center">
+                    <ContentControl Canvas.Left="{Binding HalfWidth}"
+                                Canvas.Top="{Binding HalfHeight}"
+                                Content="{Binding}"
+                                ContentTemplateSelector="{StaticResource NodeTemplateSelector}" />
+                </Canvas>
+
+                <TextBlock Text="{Binding Model.CategoryName}"
+                       ToolTip="{Binding Model.Description}"
+                       FontSize="8"
+                       HorizontalAlignment="Center"
+                       Margin="0,4,0,0" />
+            </StackPanel>
+        </Border>
+    </DataTemplate>
+
+    <!-- Стиль линии связи -->
+    <Style x:Key="LinkStyle" TargetType="Polyline">
+        <Setter Property="Stroke" Value="{StaticResource DefaultBrush}"/>
+        <Setter Property="StrokeThickness" Value="1"/>
+        <Setter Property="ToolTip" Value="{Binding Name}"/>
+        <Style.Triggers>
+
+            <!-- 1. Цвета логических уровней (свойство Link.State) -->
+            <DataTrigger Binding="{Binding State}" Value="Low">
+                <Setter Property="Stroke" Value="{StaticResource LowBrush}"/>
+            </DataTrigger>
+            <DataTrigger Binding="{Binding State}" Value="Pos">
+                <Setter Property="Stroke" Value="{StaticResource PosBrush}"/>
+            </DataTrigger>
+            <DataTrigger Binding="{Binding State}" Value="Neg">
+                <Setter Property="Stroke" Value="{StaticResource NegBrush}"/>
+            </DataTrigger>
+
+            <!-- 2. Отключение подсветки уровней (привязано к HighlightLinks в SysViewModel через общий ScrollViewer) -->
+            <DataTrigger Binding="{Binding DataContext.HighlightLinks, RelativeSource={RelativeSource AncestorType=ScrollViewer}}" Value="False">
+                <Setter Property="Stroke" Value="{StaticResource DefaultBrush}"/>
+                <Setter Property="StrokeThickness" Value="1"/>
+            </DataTrigger>
+
+            <!-- 3. Короткое замыкание -->
+            <DataTrigger Binding="{Binding LinkStatus}" Value="Error">
+                <Setter Property="Stroke" Value="{StaticResource ErrorBrush}"/>
+                <Setter Property="StrokeThickness" Value="2"/>
+            </DataTrigger>
+
+            <!-- 4. Логически отключенная связь (используется также для временного PendingLink) -->
+            <DataTrigger Binding="{Binding Activity}" Value="False">
+                <Setter Property="Stroke" Value="{StaticResource DefaultBrush}"/>
+                <Setter Property="StrokeDashArray" Value="2 2"/>
+                <Setter Property="Opacity" Value="0.6"/>
+            </DataTrigger>
+
+            <!-- 5. Выделенная связь (в самом конце, чтобы гарантированно перекрывать цвет и толщину) -->
+            <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                <Setter Property="Stroke" Value="DodgerBlue"/>
+                <Setter Property="StrokeThickness" Value="3"/>
+                <Setter Property="StrokeStartLineCap" Value="Round"/>
+                <Setter Property="StrokeEndLineCap" Value="Round"/>
+            </DataTrigger>
+
+        </Style.Triggers>
+    </Style>
+
+    <!-- Шаблон связи -->
+    <DataTemplate x:Key="LinkTemplate" DataType="{x:Type vm:LinkVm}">
+        <Canvas>
+            <!-- 1. Невидимая широкая зона клика (10px), чтобы легко попадать мышью по проводу -->
+            <Polyline Points="{Binding ScreenPoints}"
+                  Stroke="Transparent"
+                  StrokeThickness="10"
+                  StrokeLineJoin="Miter"
+                  StrokeStartLineCap="Round"
+                  StrokeEndLineCap="Round" />
+
+            <!-- 2. Видимая линия связи -->
+            <Polyline Points="{Binding ScreenPoints}"
+                  Style="{StaticResource LinkStyle}"
+                  IsHitTestVisible="False"
+                  StrokeLineJoin="Miter"
+                  Tag="{Binding Tag, RelativeSource={RelativeSource AncestorType=ContentPresenter}}" />
+
+            <!-- 3. Универсальная ручка сдвига центрального сегмента (↔ для вертикального, ↕ для горизонтального) -->
+            <cc:LinkSegmentThumb Canvas.Left="{Binding HandleX}"
+                             Canvas.Top="{Binding HandleY}"
+                             Visibility="{Binding HasDraggableSegment, Converter={StaticResource BoolToVis}}">
+                <cc:LinkSegmentThumb.Style>
+                    <Style TargetType="cc:LinkSegmentThumb">
+                        <Setter Property="Width" Value="8" />
+                        <Setter Property="Height" Value="14" />
+                        <Setter Property="Margin" Value="-4,-7,0,0" />
+                        <Setter Property="Cursor" Value="SizeWE" />
+                        <Setter Property="ToolTip" Value="Перетащите влево/вправо для сдвига участка" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsHorizontalSegment}" Value="True">
+                                <Setter Property="Width" Value="14" />
+                                <Setter Property="Height" Value="8" />
+                                <Setter Property="Margin" Value="-7,-4,0,0" />
+                                <Setter Property="Cursor" Value="SizeNS" />
+                                <Setter Property="ToolTip" Value="Перетащите вверх/вниз для сдвига участка" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </cc:LinkSegmentThumb.Style>
+                <Thumb.Template>
+                    <ControlTemplate TargetType="Thumb">
+                        <Rectangle Fill="White"
+                               Stroke="DodgerBlue"
+                               StrokeThickness="1.5"
+                               RadiusX="2"
+                               RadiusY="2" />
+                    </ControlTemplate>
+                </Thumb.Template>
+            </cc:LinkSegmentThumb>
+        </Canvas>
+    </DataTemplate>
+
+    <!-- контекстное меню Линка -->
+    <ContextMenu x:Key="LinkContextMenu">
+        <MenuItem Command="{Binding PlacementTarget.Tag.DataContext.ToggleLinksActivityCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+      CommandParameter="{Binding PlacementTarget.Tag.SelectedItems, RelativeSource={RelativeSource AncestorType=ContextMenu}}">
+            <MenuItem.Style>
+                <Style TargetType="MenuItem">
+                    <Setter Property="Header" Value="Отключить связь"/>
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding PlacementTarget.DataContext.Activity, RelativeSource={RelativeSource AncestorType=ContextMenu}}" Value="False">
+                            <Setter Property="Header" Value="Включить связь"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </MenuItem.Style>
+        </MenuItem>
+
+        <Separator/>
+
+        <MenuItem Header="Прямая линия"
+              IsCheckable="True"
+              IsChecked="{Binding PlacementTarget.DataContext.RoutingMode, RelativeSource={RelativeSource AncestorType=ContextMenu}, Mode=TwoWay, 
+            Converter={StaticResource EnumToBoolConverter}, ConverterParameter={x:Static models:LinkRoutingMode.Direct}}" />
+
+        <MenuItem Header="Ортогональная (90°)"
+              IsCheckable="True"
+              IsChecked="{Binding PlacementTarget.DataContext.RoutingMode, RelativeSource={RelativeSource AncestorType=ContextMenu}, Mode=TwoWay, 
+            Converter={StaticResource EnumToBoolConverter}, ConverterParameter={x:Static models:LinkRoutingMode.Orthogonal}}" />
+
+        <MenuItem Header="Со скосами (45°)"
+              IsCheckable="True"
+              IsChecked="{Binding PlacementTarget.DataContext.RoutingMode, RelativeSource={RelativeSource AncestorType=ContextMenu}, Mode=TwoWay, 
+            Converter={StaticResource EnumToBoolConverter}, ConverterParameter={x:Static models:LinkRoutingMode.Diagonal45}}" />
+
+
+
+        <Separator/>
+
+        <MenuItem Header="Удалить" InputGestureText="Del"
+      Command="{Binding PlacementTarget.Tag.DataContext.DeleteLinksCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+      CommandParameter="{Binding PlacementTarget.Tag.SelectedItems, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+    </ContextMenu>
+
+</ResourceDictionary>

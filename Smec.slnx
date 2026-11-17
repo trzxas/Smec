@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="../Smec.Generators/Smec.Generators.csproj" Id="c15e5aa9-95f3-43ef-b69e-6a1d5a2d1979" />
+  <Project Path="../Smec.Tests/Smec.Tests.csproj" Id="bf62a189-7277-4edf-abae-d122614eccce" />
+  <Project Path="Smec.csproj" />
+</Solution>

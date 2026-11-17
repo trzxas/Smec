@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace Emulation
+namespace Smec
 {
     public interface IOwnable<P>
     {

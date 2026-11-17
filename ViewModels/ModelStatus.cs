@@ -1,6 +1,6 @@
 ﻿//using CommunityToolkit.Mvvm.Input;
 
-namespace Emulation.ViewModels
+namespace Smec.ViewModels
 {
     [Flags]
     public enum ModelStatus

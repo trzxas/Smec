@@ -3,11 +3,11 @@ using System.Collections.Generic;
 using System.Text;
 using System.Windows.Input;
 
-namespace Emulation.ViewModels
+namespace Smec.ViewModels
 {
     public class RelayCommand(Action<object?> execute, Func<object?, bool>? canExecute = null) : ICommand
     {
-        private readonly Action<object?> execute = execute;
+        private readonly Action<object?> execute = execute ?? throw new ArgumentNullException(nameof(execute));
         private readonly Func<object?, bool>? canExecute = canExecute;
 
         public event EventHandler? CanExecuteChanged
