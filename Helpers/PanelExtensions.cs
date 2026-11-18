@@ -9,7 +9,7 @@
 
     public static class PanelExtensions
     {
-        // Регистрируем свойство ItemsSource для панелей
+        // Регистрируем свойство зависимости ItemsSource для панелей
         public static readonly DependencyProperty ItemsSourceProperty =
             DependencyProperty.RegisterAttached(
                 "ItemsSource",

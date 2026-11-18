@@ -355,7 +355,7 @@
                         <ScaleTransform ScaleX="{Binding ZoomLevel}" ScaleY="{Binding ZoomLevel}"/>
                     </Grid.LayoutTransform>
 
-                    <!-- СЛОЙ ПРОВОДОВ (размещается в WorkGrid ПЕРЕД NodesListBox, чтобы компоненты перекрывали концы проводов) -->
+                    <!-- СЛОЙ ПРОВОДОВ (размещается в WorkGrid ПЕРЕД ComponentsLayer, чтобы компоненты перекрывали концы проводов) -->
                     <ListBox x:Name="LinksLayer"
                                     ItemsSource="{Binding Links}"
                                     SelectionMode="Extended"
@@ -364,16 +364,16 @@
                                     Padding="0"
                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                                     ScrollViewer.VerticalScrollBarVisibility="Disabled"
-                                RequestBringIntoView="ListBox_RequestBringIntoView"
-                                PreviewMouseLeftButtonDown="LinksListBox_PreviewMouseLeftButtonDown"
-                                PreviewMouseRightButtonDown="LinksListBox_PreviewMouseRightButtonDown"
-                             ItemTemplate="{StaticResource LinkTemplate}">
+                                RequestBringIntoView="Links_RequestBringIntoView"
+                                PreviewMouseLeftButtonDown="Links_PreviewMouseLeftButtonDown"
+                                PreviewMouseRightButtonDown="Links_PreviewMouseRightButtonDown"
+                                ItemTemplate="{StaticResource LinkTemplate}">
 
                         <ListBox.InputBindings>
                             <KeyBinding Key="Delete" Command="{Binding DeleteLinksCommand}"
-                                CommandParameter="{Binding SelectedItems, ElementName=LinksListBox}"/>
+                                CommandParameter="{Binding SelectedItems, ElementName=LinksLayer}"/>
                             <KeyBinding Key="Backspace" Command="{Binding DeleteLinksCommand}"
-                                CommandParameter="{Binding SelectedItems, ElementName=LinksListBox}"/>
+                                CommandParameter="{Binding SelectedItems, ElementName=LinksLayer}"/>
                         </ListBox.InputBindings>
 
                         <!-- Размещаем все провода на общем Canvas -->
@@ -413,6 +413,13 @@
                                         </ControlTemplate>
                                     </Setter.Value>
                                 </Setter>
+                                
+                                <!-- Поднимаем выделенный провод и его ручку поверх остальных проводов -->
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                        <Setter Property="Panel.ZIndex" Value="10" />
+                                    </DataTrigger>
+                                </Style.Triggers>
                             </Style>
                         </ListBox.ItemContainerStyle>
                     </ListBox>
@@ -513,7 +520,7 @@
                                 <!-- Подключаем контекстное меню -->
                                 <Setter Property="ContextMenu" Value="{StaticResource NodeContextMenu}"/>
 
-                                <!-- Триггер смены курсора на крест перемещения при выделении элемента -->
+                                <!-- Триггер смены курсора  при выделении элемента -->
                                 <Style.Triggers>
                                     <Trigger Property="IsSelected" Value="True">
                                         <Setter Property="Cursor" Value="SizeAll" />

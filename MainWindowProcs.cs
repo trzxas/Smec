@@ -452,8 +452,8 @@ namespace Smec
 
         #endregion
 
-        #region Обработка событий списка LinkListBox 
-        private void LinksListBox_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        #region Обработка событий списка Links 
+        private void Links_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
             if (_viewModel.IsSimulating)
             {
@@ -470,7 +470,7 @@ namespace Smec
             LinksLayer.Focus();
         }
 
-        private void LinksListBox_PreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)
+        private void Links_PreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)
         {
             // Во время симуляции запрещаем редактирование
             if (_viewModel.IsSimulating)
@@ -493,11 +493,14 @@ namespace Smec
             }
         }
 
-        private void ListBox_RequestBringIntoView(object sender, RequestBringIntoViewEventArgs e)
+        private void Links_RequestBringIntoView(object sender, RequestBringIntoViewEventArgs e)
         {
             // Запрещаем ScrollViewer автоматически прокручивать холст к (0, 0) при выделении провода или узла
             e.Handled = true;
         }
+
+        
+
 
         #endregion
 

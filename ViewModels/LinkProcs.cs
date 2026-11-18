@@ -1,4 +1,6 @@
 ﻿using Smec.Models;
+using System.Collections;
+using System.Windows.Input;
 
 namespace Smec.ViewModels
 {
@@ -25,6 +27,9 @@ namespace Smec.ViewModels
             if (IsSimulating || CurrentModel == null)
                 return;
 
+            // Сбрасываем возможную зависшую подсветку от предыдущей незавершённой протяжки
+            CancelLinkCreation();
+
             _pendingSourceNode = sourceNode;
             _pendingSourcePin = sourcePin;
 
@@ -50,22 +55,19 @@ namespace Smec.ViewModels
             if (!IsCreatingLink || _pendingSourceNode == null || _pendingSourcePin == null)
                 return;
 
-            // 1. Передаём сразу _pendingSourcePin (в нём уже есть и NodeId, и PinNumber, и PortModel.Mode)
             var candidate = FindNearestCompatiblePin(_pendingSourcePin, mousePosition, PortSnapRadius);
 
-            // 2. Сбрасываем подсветку со старого пина в null (не трогая стартовый!)
+            // Сбрасываем подсветку со старого пина в null (не трогая стартовый!)
             if (_highlightedPin != null && _highlightedPin != _pendingSourcePin && _highlightedPin != candidate?.Pin)
             {
                 _highlightedPin.HighlightStatus = null;
             }
 
-            // 3. Запоминаем и целевой узел, и целевой пин
             _highlightedTargetNode = candidate?.Node;
             _highlightedPin = candidate?.Pin;
 
             if (_highlightedPin != null)
             {
-                // Проверяем режим Out+Out через PortModel (если он привязан к PinVm)
                 bool isTwoOutputs = _pendingSourcePin.PortModel?.Mode == PortMode.Out &&
                                     _highlightedPin.PortModel?.Mode == PortMode.Out;
 
@@ -83,6 +85,8 @@ namespace Smec.ViewModels
             OnPropertyChanged(nameof(PendingEndPoint));
         }
 
+
+
         /// <summary>
         /// 3. Завершение протягивания (создание постоянного Link или отмена, если порт не выбран)
         /// </summary>
@@ -91,25 +95,18 @@ namespace Smec.ViewModels
             if (!IsCreatingLink || _pendingSourceNode == null || _pendingSourcePin == null)
                 return;
 
-            // Если курсор был примагничен к целевому пину — создаём постоянную связь!
             if (_highlightedPin != null && _highlightedTargetNode != null && CurrentModel != null)
             {
-                // Берём существующие NodePort из пинов (где уже есть Owner, Mode и State),
-                // либо создаём новые с привязкой к узлам
                 var portA = _pendingSourcePin.PortModel ?? new NodePort
                 {
-                    //NodeId = _pendingSourceNode.Model.Id,
                     PinNumber = _pendingSourcePin.Definition.Number,
-                    //Owner = _pendingSourceNode.Model
-                    Owner=_pendingSourcePin.PortModel?.Owner
+                    Owner = _pendingSourceNode.Model
                 };
 
                 var portB = _highlightedPin.PortModel ?? new NodePort
                 {
-                    //NodeId = _highlightedTargetNode.Model.Id,
                     PinNumber = _highlightedPin.Definition.Number,
-                    //Owner = _highlightedTargetNode.Model
-                    Owner = _highlightedPin.PortModel?.Owner
+                    Owner = _highlightedTargetNode.Model
                 };
 
                 var newLink = new Link
@@ -119,13 +116,11 @@ namespace Smec.ViewModels
                     Activity = true
                 };
 
-                // Добавляем ТОЛЬКО в CurrentModel.Links —
-                // обработчик OnModelLinksChanged сам создаст LinkVm и отрисует провод на Canvas!
                 CurrentModel.Links.Add(newLink);
                 VmStatus = ModelStatus.LogicalChanged;
             }
 
-            CancelLinkCreation(); // Сбрасываем временное состояние и подсветку пинов
+            CancelLinkCreation();
         }
 
         public void CancelLinkCreation()
@@ -160,18 +155,15 @@ namespace Smec.ViewModels
             {
                 foreach (var candidatePin in nodeVm.Pins)
                 {
-                    // Пропускаем тот же самый пин, с которого начали тянуть провод
                     if (candidatePin == sourcePin)
                         continue;
 
-                    // Используем вашу существующую логику проверки совместимости портов!
                     if (sourcePin.PortModel != null && candidatePin.PortModel != null &&
                         !CanConnect(sourcePin.PortModel, candidatePin.PortModel))
                     {
                         continue;
                     }
 
-                    // Получаем актуальные мировые пиксельные координаты пина на холсте
                     System.Windows.Point pinScreenPos = nodeVm.GetPinScreenPosition(candidatePin.Definition.Number);
 
                     double dx = pinScreenPos.X - mousePosition.X;
@@ -189,7 +181,6 @@ namespace Smec.ViewModels
             return bestMatch;
         }
 
-
         /// <summary>
         /// Проверка, можно ли соединить два порта
         /// </summary>
@@ -200,13 +191,22 @@ namespace Smec.ViewModels
             // Нельзя соединить порт сам с собой
             if (portA == portB) return false;
 
-            // Защита от дублирования проводов между теми же двумя портами
+            // Защита от дублирования проводов по ссылке и по паре (Owner + PinNumber)
             bool alreadyExists = CurrentModel.Links.Any(l =>
                 (l.PortA == portA && l.PortB == portB) ||
-                (l.PortA == portB && l.PortB == portA));
+                (l.PortA == portB && l.PortB == portA) 
+                // Это лишняя проверка!
+                //|| (l.PortA.Owner == portA.Owner && l.PortA.PinNumber == portA.PinNumber &&
+                // l.PortB.Owner == portB.Owner && l.PortB.PinNumber == portB.PinNumber) 
+                //|| (l.PortA.Owner == portB.Owner && l.PortA.PinNumber == portB.PinNumber &&
+                // l.PortB.Owner == portA.Owner && l.PortB.PinNumber == portA.PinNumber)
+                 );
 
             return !alreadyExists;
         }
+
+
+        
 
 
 
@@ -266,6 +266,29 @@ namespace Smec.ViewModels
                 link.Model.Activity = targetState;
             }
         }
+
+        #region Команды контекстного меню связей
+
+        private void ExecuteSetLinksRoutingMode(object? parameter)
+        {
+            if (parameter is object[] { Length: 2 } args &&
+                args[1] is LinkRoutingMode mode)
+            {
+                foreach (var link in ExtractLinks(args[0]))
+                    link.RoutingMode = mode;
+            }
+        }
+
+        private bool CanExecuteResetLinkOffsets(object? parameter) =>
+            ExtractLinks(parameter).Any(l => l.HasSegmentOffsets);
+
+        private void ExecuteResetLinkOffsets(object? parameter)
+        {
+            foreach (var link in ExtractLinks(parameter))
+                link.ResetSegmentOffsets();
+        }
+
+        #endregion
 
     }
 }

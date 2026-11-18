@@ -383,65 +383,6 @@ namespace Smec.ViewModels
         public string CurrentFile => string.IsNullOrEmpty(CurrentFilePath) ?
             "Новый_" + DateTime.Now.ToString("yyyyMMddHHmmss") : Path.GetFileName(CurrentFilePath);
 
-
-
-        // Additioanal properties
-        public String ContentText { get; set { SetProperty(ref field, value); } } = String.Empty;
-        public String StatusText { get; set { SetProperty(ref field, value); } } = String.Empty;
-
-
-
-
-
-        // Команды Открытия, закрытия, импорта, экспорта 
-        public RelayCommand QuickLoadCommand { get; }
-        public RelayCommand NewFileCommand { get; }
-        public RelayCommand OpenFileCommand { get; }
-        public RelayCommand SaveFileCommand { get; }
-        public RelayCommand CloseFileCommand { get; }
-        public RelayCommand ImportCommand { get; }
-        public RelayCommand ExportCommand { get; }
-        public RelayCommand ExitCommand { get; }
-
-        // Команды работы с объектами
-        public RelayCommand OptionsColorCommand { get; }
-        public RelayCommand CloneNodeCommand { get; }
-        public RelayCommand RemoveNodeCommand { get; }
-        public RelayCommand NodePropertiesCommand { get; }
-
-        // Команды  рабочей области
-        public RelayCommand SetGridPresetCommand { get; }
-        public RelayCommand SetGridStyleCommand { get; }
-
-        public RelayCommand SetGridThemeCommand { get; }
-
-        public RelayCommand ZoomInCommand { get; }
-        public RelayCommand ZoomOutCommand { get; }
-        public RelayCommand ResetZoomCommand { get; }
-
-        // Команды редактирования
-        public RelayCommand ClearSelectionCommand { get; }
-        public RelayCommand CloneSelectedNodesCommand { get; }
-        public RelayCommand RemoveSelectedNodesCommand { get; }
-
-        public RelayCommand ToggleLinksActivityCommand { get; }
-        public RelayCommand DeleteLinksCommand { get; }
-
-        // Команды симуляции
-        public ICommand StartCommand => field ??= new RelayCommand(_ => StartSimulation(), _ => CurrentModel != null && !IsSimulating);
-
-        public ICommand StopCommand => field ??= new RelayCommand(async _ => await StopSimulationAsync(), _ => IsSimulating);
-
-        public ICommand PauseCommand => field ??= new RelayCommand(param => TogglePause(param is true), _ => IsSimulating);
-
-        // Services
-        private readonly IAppSettings _appSettings;
-        private readonly IDialogService _fileDialogService;
-        private readonly IDataServiceFactory _serviceFactory;
-
-        private readonly IMessageService _messageService;
-        private readonly IWindowService _windowService;
-
         private readonly SymbolLibrary _symbolLibrary;
 
         // Публичное свойство — удобно биндить в XAML (например, к ComboBox выбора шага сетки)
@@ -453,7 +394,71 @@ namespace Smec.ViewModels
 
         private readonly DispatcherTimer _autoSaveTimer;
 
+        // Additioanal properties
+        public String ContentText { get; set { SetProperty(ref field, value); } } = String.Empty;
+        public String StatusText { get; set { SetProperty(ref field, value); } } = String.Empty;
 
+        #region  Команды
+        // Команды Открытия, закрытия, импорта, экспорта
+        public RelayCommand QuickLoadCommand => field ??= new(OpenFileProc, CanExecuteIfNotSimulating);
+        public RelayCommand NewFileCommand => field ??= new(NewFile, CanExecuteIfNotSimulating);
+        public RelayCommand OpenFileCommand => field ??= new(OpenFile, CanExecuteIfNotSimulating);
+        public RelayCommand SaveFileCommand => field ??= new(SaveFile, CanExecuteIfExist);
+        public RelayCommand CloseFileCommand => field ??= new(CloseFile, CanExecuteIfNotSimulating);
+        public RelayCommand ImportCommand => field ??= new(ImportData, CanExecuteIfnotExist);
+        public RelayCommand ExportCommand => field ??= new(ExportData, CanExecuteIfExist);
+        public RelayCommand ExitCommand => field ??= new(Exit);
+
+        // Команды работы с объектами
+        public RelayCommand OptionsColorCommand => field ??= new(OpenColorDialog);
+        public RelayCommand CloneNodeCommand => field ??= new(CloneNode, CanExecuteIfNotSimulating);
+        public RelayCommand RemoveNodeCommand => field ??= new(RemoveNode, CanExecuteIfNotSimulating);
+        public RelayCommand NodePropertiesCommand => field ??= new(ShowNodeProperties, CanExecuteIfNotSimulating);
+
+        // Команды рабочей области
+        public RelayCommand SetGridPresetCommand => field ??= new(p => { if (p is GridPreset preset) CurrentGridPreset = preset; });
+        public RelayCommand SetGridStyleCommand => field ??= new(p => { if (p is GridStyleMode style) CurrentGridStyle = style; });
+        public RelayCommand SetGridThemeCommand => field ??= new(SetGridTheme);
+
+        public RelayCommand ZoomInCommand => field ??= new(_ => ZoomIn(), CanExecuteIfExist);
+        public RelayCommand ZoomOutCommand => field ??= new(_ => ZoomOut(), CanExecuteIfExist);
+        public RelayCommand ResetZoomCommand => field ??= new(_ => ResetZoom(), CanExecuteIfExist);
+
+        // Команды редактирования
+        public RelayCommand ClearSelectionCommand => field ??= new(
+            execute: _ => RequestClearSelection?.Invoke(),
+            canExecute: _ => SelectedNodes.Count > 0 && _primaryDraggedNode == null);
+
+        public RelayCommand CloneSelectedNodesCommand => field ??= new(
+            execute: _ => CloneNodes(SelectedNodes),
+            canExecute: _ => !IsSimulating && SelectedNodes.Count > 0);
+
+        public RelayCommand RemoveSelectedNodesCommand => field ??= new(
+            execute: _ => DeleteNodes(SelectedNodes),
+            canExecute: _ => !IsSimulating && SelectedNodes.Count > 0);
+
+        public RelayCommand ToggleLinksActivityCommand => field ??= new(ToggleLinksActivity, CanModifySelectedLinks);
+        public RelayCommand DeleteLinksCommand => field ??= new(DeleteSelectedLinks, CanModifySelectedLinks);
+
+        // Новые команды контекстного меню связей
+        public RelayCommand SetLinksRoutingModeCommand => field ??= new(ExecuteSetLinksRoutingMode);
+        public RelayCommand ResetLinkOffsetsCommand => field ??= new(ExecuteResetLinkOffsets, CanExecuteResetLinkOffsets);
+
+        // Команды симуляции
+        public ICommand StartCommand => field ??= new RelayCommand(_ => StartSimulation(), _ => CurrentModel != null && !IsSimulating);
+
+        public ICommand StopCommand => field ??= new RelayCommand(async _ => await StopSimulationAsync(), _ => IsSimulating);
+
+        public ICommand PauseCommand => field ??= new RelayCommand(param => TogglePause(param is true), _ => IsSimulating);
+        #endregion
+
+        // Services
+        private readonly IAppSettings _appSettings;
+        private readonly IDialogService _fileDialogService;
+        private readonly IDataServiceFactory _serviceFactory;
+
+        private readonly IMessageService _messageService;
+        private readonly IWindowService _windowService;
 
         // Конструктор-заглушка ДЛЯ XAML DESIGNER (теперь он пустой и не ломает readonly)
 #pragma warning disable CS8618 // Отключаем проверку для пустого конструктора
@@ -478,45 +483,6 @@ namespace Smec.ViewModels
             _windowService = windowService;
             GridSettings = gridSettings;
             _symbolLibrary = symbolLibrary;
-
-            // 2. Инициализируем команды (теперь они без проблем видят сервисы)
-            QuickLoadCommand = new(OpenFileProc, CanExecuteIfNotSimulating);
-            NewFileCommand = new(NewFile, CanExecuteIfNotSimulating);
-            OpenFileCommand = new(OpenFile, CanExecuteIfNotSimulating);
-            SaveFileCommand = new(SaveFile, CanExecuteIfExist);
-            CloseFileCommand = new(CloseFile, CanExecuteIfNotSimulating);
-            ImportCommand = new(ImportData, CanExecuteIfnotExist);
-            ExportCommand = new(ExportData, CanExecuteIfExist);
-            ExitCommand = new(Exit);
-            OptionsColorCommand = new(OpenColorDialog);
-
-            RemoveNodeCommand = new(RemoveNode, CanExecuteIfNotSimulating);
-            CloneNodeCommand = new(CloneNode, CanExecuteIfNotSimulating);
-            NodePropertiesCommand = new(ShowNodeProperties, CanExecuteIfNotSimulating);
-
-            ToggleLinksActivityCommand = new(ToggleLinksActivity, CanModifySelectedLinks);
-            DeleteLinksCommand = new(DeleteSelectedLinks, CanModifySelectedLinks);
-
-
-            ZoomInCommand = new(_ => ZoomIn(), CanExecuteIfExist);
-            ZoomOutCommand = new(_ => ZoomOut(), CanExecuteIfExist);
-            ResetZoomCommand = new(_ => ResetZoom(), CanExecuteIfExist);
-
-            ClearSelectionCommand = new RelayCommand(
-                execute: _ => RequestClearSelection?.Invoke(),
-                canExecute: _ => SelectedNodes.Count > 0 && _primaryDraggedNode == null); // Не сбрасываем во время активного DragDrop
-
-            CloneSelectedNodesCommand = new RelayCommand(
-                execute: _ => CloneNodes(SelectedNodes),
-                canExecute: _ => !IsSimulating && SelectedNodes.Count > 0); // Запрещаем клонирование при симуляции
-
-            RemoveSelectedNodesCommand = new RelayCommand(
-                execute: _ => DeleteNodes(SelectedNodes),
-                canExecute: _ => !IsSimulating && SelectedNodes.Count > 0); // Запрещаем удаление при симуляции (блокирует и Delete / Backspace)
-
-            SetGridPresetCommand = new RelayCommand(p => { if (p is GridPreset preset) CurrentGridPreset = preset; });
-            SetGridStyleCommand = new RelayCommand(p => { if (p is GridStyleMode style) CurrentGridStyle = style; });
-            SetGridThemeCommand = new(SetGridTheme);
 
             UpdateGridBrush();
 
@@ -620,7 +586,6 @@ namespace Smec.ViewModels
         #endregion
 
 
-
         #region Расчет точек соединения
         /// <summary>
         /// Пересчитывает все точки электрического соединения (узлы ветвления) на схеме.
@@ -635,7 +600,13 @@ namespace Smec.ViewModels
             }
 
             Junctions.Clear();
-            if (Links.Count < 2)
+
+            // Берём в расчёт только активные (включённые) провода
+            var activeLinks = Links
+                .Where(l => l.Model.Activity && l.ScreenPoints.Count >= 2)
+                .ToList();
+
+            if (activeLinks.Count < 2)
                 return;
 
             const double eps = 1.5;
@@ -649,21 +620,19 @@ namespace Smec.ViewModels
                 }
             }
 
-            // 1. Для каждой пары проводов, начинающихся или заканчивающихся на одном пине,
-            // находим последнюю общую точку их маршрутов перед тем, как линии разойдутся в разные стороны!
-            for (int i = 0; i < Links.Count; i++)
+            // 1. Для каждой пары активных проводов, начинающихся или заканчивающихся на одном пине,
+            // находим точку, где их общая трасса расходится в разные стороны (строго за пределами самого пина!)
+            for (int i = 0; i < activeLinks.Count; i++)
             {
-                for (int j = i + 1; j < Links.Count; j++)
+                for (int j = i + 1; j < activeLinks.Count; j++)
                 {
-                    var ptsA = Links[i].ScreenPoints;
-                    var ptsB = Links[j].ScreenPoints;
-                    if (ptsA.Count < 2 || ptsB.Count < 2) continue;
+                    var ptsA = activeLinks[i].ScreenPoints;
+                    var ptsB = activeLinks[j].ScreenPoints;
 
-                    // Проверяем все 4 комбинации стыковки концов (Start-Start, Start-End, End-Start, End-End)
-                    TryFindDivergencePoint(ptsA, reverseA: false, ptsB, reverseB: false, Links[i].State);
-                    TryFindDivergencePoint(ptsA, reverseA: false, ptsB, reverseB: true, Links[i].State);
-                    TryFindDivergencePoint(ptsA, reverseA: true, ptsB, reverseB: false, Links[i].State);
-                    TryFindDivergencePoint(ptsA, reverseA: true, ptsB, reverseB: true, Links[i].State);
+                    TryFindDivergencePoint(ptsA, reverseA: false, ptsB, reverseB: false, activeLinks[i].State);
+                    TryFindDivergencePoint(ptsA, reverseA: false, ptsB, reverseB: true, activeLinks[i].State);
+                    TryFindDivergencePoint(ptsA, reverseA: true, ptsB, reverseB: false, activeLinks[i].State);
+                    TryFindDivergencePoint(ptsA, reverseA: true, ptsB, reverseB: true, activeLinks[i].State);
                 }
             }
 
@@ -676,11 +645,11 @@ namespace Smec.ViewModels
                 if ((startA - startB).Length >= eps)
                     return;
 
-                // Строим упорядоченные списки точек от общего пина наружу
-                var pathA = reverseA ? a.Reverse().ToList() : a.ToList();
-                var pathB = reverseB ? b.Reverse().ToList() : b.ToList();
+                var pathA = reverseA ? [.. a.Reverse()] : a.ToList();
+                var pathB = reverseB ? [.. b.Reverse()] : b.ToList();
 
-                Point lastCommon = pathA[0];
+                Point pinOrigin = pathA[0];
+                Point lastCommon = pinOrigin;
                 int minCount = Math.Min(pathA.Count, pathB.Count);
 
                 for (int k = 1; k < minCount; k++)
@@ -692,8 +661,7 @@ namespace Smec.ViewModels
                         continue;
                     }
 
-                    // Если один сегмент короче другого, но лежит на той же прямой (как отрезок G2 -> красная стрелка
-                    // внутри длинного горизонтального отрезка G2 -> D5!), то точка расхождения — конец более короткого сегмента!
+                    // Если один сегмент короче другого, но лежит на той же прямой — точка расхождения на конце более короткого
                     if (IsPointStrictlyOnSegment(pathA[k], lastCommon, pathB[k], eps))
                     {
                         lastCommon = pathA[k];
@@ -705,20 +673,29 @@ namespace Smec.ViewModels
                     break;
                 }
 
-                AddUniqueJunction(lastCommon, state);
+                // Ставим точку ветвления только если провода прошли общий участок и разошлись в стороне от самого пина
+                if ((lastCommon - pinOrigin).Length >= eps)
+                {
+                    AddUniqueJunction(lastCommon, state);
+                }
             }
 
-            // 2. Дополнительно проверяем классические Т-стыки (конец одного провода упирается в середину отрезка другого)
-            foreach (var linkA in Links)
+            // 2. Классические Т-стыки (конец одного активного провода упирается в середину отрезка другого,
+            // НО только если эти два провода электрически соединены между собой!)
+            foreach (var linkA in activeLinks)
             {
-                if (linkA.ScreenPoints.Count < 2) continue;
                 Point[] ends = [linkA.ScreenPoints[0], linkA.ScreenPoints[^1]];
 
                 foreach (var ep in ends)
                 {
-                    foreach (var linkB in Links)
+                    foreach (var linkB in activeLinks)
                     {
                         if (linkA == linkB) continue;
+
+                        // Проверяем, что провода принадлежат одной электрической цепи (имеют общий порт или связаны цепочкой)
+                        if (!AreLinksElectricallyConnected(linkA, linkB, activeLinks))
+                            continue;
+
                         var pts = linkB.ScreenPoints;
                         for (int k = 0; k < pts.Count - 1; k++)
                         {
@@ -730,6 +707,7 @@ namespace Smec.ViewModels
                     }
                 }
             }
+
 
             foreach (var (pt, state) in foundNodes)
             {
@@ -756,6 +734,44 @@ namespace Smec.ViewModels
             double dot = (p.X - a.X) * (b.X - a.X) + (p.Y - a.Y) * (b.Y - a.Y);
             return dot > eps && dot < segLen * segLen - eps;
         }
+
+        private static bool AreLinksElectricallyConnected(LinkVm a, LinkVm b, List<LinkVm> activeLinks)
+        {
+            // Быстрая проверка: есть ли прямой общий порт
+            if (a.Model.PortA == b.Model.PortA || a.Model.PortA == b.Model.PortB ||
+                a.Model.PortB == b.Model.PortA || a.Model.PortB == b.Model.PortB)
+                return true;
+
+            // Обход в ширину (BFS) по активным связям: ищем, достижим ли linkB от linkA через общие порты
+            var visited = new HashSet<LinkVm> { a };
+            var queue = new Queue<LinkVm>();
+            queue.Enqueue(a);
+
+            while (queue.Count > 0)
+            {
+                var current = queue.Dequeue();
+                var p1 = current.Model.PortA;
+                var p2 = current.Model.PortB;
+
+                foreach (var next in activeLinks)
+                {
+                    if (visited.Contains(next)) continue;
+
+                    if (next.Model.PortA == p1 || next.Model.PortA == p2 ||
+                        next.Model.PortB == p1 || next.Model.PortB == p2)
+                    {
+                        if (next == b)
+                            return true;
+
+                        visited.Add(next);
+                        queue.Enqueue(next);
+                    }
+                }
+            }
+
+            return false;
+        }
+
 
         #endregion
     }

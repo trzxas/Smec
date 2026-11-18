@@ -42,11 +42,6 @@ namespace Smec.ViewModels
 
         public PortDecorator Decorator => PortModel?.Decorator ?? PortDecorator.None;
 
-        // Геометрия для Circle (инверсия) — центр и радиус в пикселях:
-        public double CircleLeft { get; private set; }
-        public double CircleTop { get; private set; }
-        public double CircleDiameter { get; private set; }
-
         // Универсальная векторная фигура декоратора (Circle, Slash, BackSlash, Arrow)
         public Geometry? DecoratorGeometry { get; private set; }
 

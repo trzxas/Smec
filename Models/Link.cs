@@ -1,4 +1,6 @@
-﻿using System.ComponentModel;
+﻿using System.Collections.ObjectModel;
+using System.Collections.Specialized;
+using System.ComponentModel;
 using System.Runtime.Serialization;
 
 namespace Smec.Models
@@ -18,6 +20,12 @@ namespace Smec.Models
     [DataContract]
     public class Link : NamedBase
     {
+
+        public Link()
+        {
+            SegmentOffsets.CollectionChanged += OnSegmentOffsetsChanged;
+        }
+
         public string Id { get; set; } = Guid.NewGuid().ToString("N");
 
         /// <summary>
@@ -50,12 +58,68 @@ namespace Smec.Models
             set => SetProperty(ref field, value);
         } = LinkRoutingMode.Orthogonal;
 
-        // Ручное смещение центрального  сегмента (в клетках сетки, с шагом 0.5)
-       public double ChannelOffset
+
+        [DataMember]
+        // Массив ручных смещений при редактировании Линка
+        public ObservableCollection<double> SegmentOffsets
         {
             get;
-            set => SetProperty(ref field, value);
-        } = 0;
+            set
+            {
+                field?.CollectionChanged -= OnSegmentOffsetsChanged;
+                field = value ?? [];
+                field.CollectionChanged += OnSegmentOffsetsChanged;
+                OnPropertyChanged();
+            }
+        } = [];
+
+        private void OnSegmentOffsetsChanged(object? sender, NotifyCollectionChangedEventArgs e) =>
+        OnPropertyChanged(nameof(SegmentOffsets));
+
+
+        public double GetSegmentOffset(int index) =>
+        index >= 0 && index < SegmentOffsets.Count ? SegmentOffsets[index] : 0;
+
+        public void SetSegmentOffset(int index, double value)
+        {
+            if (index < 0) return;
+
+            while (SegmentOffsets.Count <= index)
+                SegmentOffsets.Add(0);
+
+            if (Math.Abs(SegmentOffsets[index] - value) > 0.001)
+                SegmentOffsets[index] = value;
+        }
+
+        public void ResetSegmentOffsets()
+        {
+            for (int i = 0; i < SegmentOffsets.Count; i++)
+            {
+                if (Math.Abs(SegmentOffsets[i]) > 0.001)
+                    SegmentOffsets[i] = 0;
+            }
+        }
+
+        //// Ручное смещение центрального  сегмента (в клетках сетки, с шагом 0.5)
+        //public double ChannelOffset
+        //{
+        //    get;
+        //    set => SetProperty(ref field, value);
+        //} = 0;
+
+
+        //public double ChannelOffsetY
+        //{
+        //    get;
+        //    set => SetProperty(ref field, value);
+        //} = 0;
+
+
+        //public double ChannelOffset2
+        //{
+        //    get;
+        //    set => SetProperty(ref field, value);
+        //} = 0;
 
         [IgnoreDataMember]
         public ObjectStatus LinkStatus { get; private set; } = ObjectStatus.Normal;

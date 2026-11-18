@@ -17,6 +17,7 @@
     <cv:SideEnumToGridConverter x:Key="EnumSideConverter"/>
     <cv:EnumToBoolConverter x:Key="EnumToBoolConverter" />
     <BooleanToVisibilityConverter x:Key="BoolToVis" />
+    <cv:PassThroughMultiConverter x:Key="PassThroughMultiConverter" />
 
 
     <!-- 1. Два экземпляра универсального селектора (порядок в файле любой, так как ключи передаются строкой) -->
@@ -56,7 +57,7 @@
                  HotSpotX="0"
                  HotSpotY="0" />
 
-    
+
     <!-- Тонкий прицел с точкой в центре (HotSpot строго в центре 12, 12!) -->
     <StreamGeometry x:Key="CenterCrosshairGeometry">
         M 12,2 L 12,8 M 12,16 L 12,22 M 2,12 L 8,12 M 16,12 L 22,12 M 9,12 A 3,3 0 1 1 15,12 A 3,3 0 1 1 9,12
@@ -159,7 +160,7 @@
     </Style>
 
 
-   
+
 
     <DataTemplate x:Key="CircleDecorator">
         <Ellipse Width="4" Height="4" 
@@ -251,16 +252,12 @@
 
                                 <!-- Декоратор (кружок инверсии, слэш или стрелка CLK) -->
                                 <Path Data="{Binding DecoratorGeometry}"
-                                        Fill="{DynamicResource WorkspaceBackgroundBrush}"
                                         Style="{StaticResource PortLineStyle}"
                                         IsHitTestVisible="False" />
 
-                                <!-- Невидимая зона захвата 12x12 px строго по центру кончика пина (X2, Y2) -->
-                                <Ellipse Canvas.Left="{Binding X2}"
-                                            Canvas.Top="{Binding Y2}"
-                                            Width="12"
-                                            Height="12"
-                                            Margin="-4,-4,0,0"
+                                <!-- Невидимая зона захвата 8x8 px строго по центру кончика пина (X2, Y2) -->
+                                <Ellipse Canvas.Left="{Binding X2}" Canvas.Top="{Binding Y2}"
+                                            Width="8" Height="8" Margin="-4,-4,0,0"
                                             Fill="Transparent" />
                             </Canvas>
                         </DataTemplate>
@@ -270,7 +267,7 @@
 
             <!-- СЛОЙ Б: Неповорачиваемые надписи (знак функции, Designator, Value) -->
             <Canvas x:Name="NonRotatableLabels">
-               
+
                 <!-- Знак функции ("≥1", "&", "=1", "G", "?") -->
                 <Border Canvas.Left="{Binding FuncBoxX}" Canvas.Top="{Binding FuncBoxY}"
                     Width="{Binding FuncBoxWidth}" Height="{Binding FuncBoxHeight}"
@@ -381,6 +378,22 @@
         </Style.Triggers>
     </Style>
 
+
+    <!-- Базовый визуальный вид ручек сдвига проводов -->
+    <Style x:Key="BaseLinkThumbStyle" TargetType="cc:LinkSegmentThumb">
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Thumb">
+                    <Rectangle Fill="White"
+                           Stroke="DodgerBlue"
+                           StrokeThickness="1.2"
+                           RadiusX="1.5"
+                           RadiusY="1.5" />
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <!-- Шаблон связи -->
     <DataTemplate x:Key="LinkTemplate" DataType="{x:Type vm:LinkVm}">
         <Canvas>
@@ -399,40 +412,49 @@
                   StrokeLineJoin="Miter"
                   Tag="{Binding Tag, RelativeSource={RelativeSource AncestorType=ContentPresenter}}" />
 
-            <!-- 3. Универсальная ручка сдвига центрального сегмента (↔ для вертикального, ↕ для горизонтального) -->
-            <cc:LinkSegmentThumb Canvas.Left="{Binding HandleX}"
-                             Canvas.Top="{Binding HandleY}"
-                             Visibility="{Binding HasDraggableSegment, Converter={StaticResource BoolToVis}}">
-                <cc:LinkSegmentThumb.Style>
-                    <Style TargetType="cc:LinkSegmentThumb">
-                        <Setter Property="Width" Value="8" />
-                        <Setter Property="Height" Value="14" />
-                        <Setter Property="Margin" Value="-4,-7,0,0" />
-                        <Setter Property="Cursor" Value="SizeWE" />
-                        <Setter Property="ToolTip" Value="Перетащите влево/вправо для сдвига участка" />
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding IsHorizontalSegment}" Value="True">
-                                <Setter Property="Width" Value="14" />
-                                <Setter Property="Height" Value="8" />
-                                <Setter Property="Margin" Value="-7,-4,0,0" />
-                                <Setter Property="Cursor" Value="SizeNS" />
-                                <Setter Property="ToolTip" Value="Перетащите вверх/вниз для сдвига участка" />
-                            </DataTrigger>
-                        </Style.Triggers>
+            <!-- 3. Динамический список ручек сдвига сегментов -->
+            <ItemsControl ItemsSource="{Binding Handles}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <Canvas />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemContainerStyle>
+                    <Style TargetType="ContentPresenter">
+                        <Setter Property="Canvas.Left" Value="{Binding X}" />
+                        <Setter Property="Canvas.Top" Value="{Binding Y}" />
                     </Style>
-                </cc:LinkSegmentThumb.Style>
-                <Thumb.Template>
-                    <ControlTemplate TargetType="Thumb">
-                        <Rectangle Fill="White"
-                               Stroke="DodgerBlue"
-                               StrokeThickness="1.5"
-                               RadiusX="2"
-                               RadiusY="2" />
-                    </ControlTemplate>
-                </Thumb.Template>
-            </cc:LinkSegmentThumb>
+                </ItemsControl.ItemContainerStyle>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate DataType="{x:Type vm:LinkHandleVm}">
+                        <cc:LinkSegmentThumb>
+                            <cc:LinkSegmentThumb.Style>
+                                <Style TargetType="cc:LinkSegmentThumb" BasedOn="{StaticResource BaseLinkThumbStyle}">
+                                    <Setter Property="Width" Value="6" />
+                                    <Setter Property="Height" Value="10" />
+                                    <Setter Property="Margin" Value="-3,-5,0,0" />
+                                    <Setter Property="Cursor" Value="SizeWE" />
+                                    <Setter Property="ToolTip" Value="Перетащите влево/вправо для сдвига участка" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsHorizontal}" Value="True">
+                                            <Setter Property="Width" Value="10" />
+                                            <Setter Property="Height" Value="6" />
+                                            <Setter Property="Margin" Value="-5,-3,0,0" />
+                                            <Setter Property="Cursor" Value="SizeNS" />
+                                            <Setter Property="ToolTip" Value="Перетащите вверх/вниз для сдвига участка" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </cc:LinkSegmentThumb.Style>
+                        </cc:LinkSegmentThumb>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
         </Canvas>
     </DataTemplate>
+
+
+
 
     <!-- контекстное меню Линка -->
     <ContextMenu x:Key="LinkContextMenu">
@@ -452,22 +474,50 @@
 
         <Separator/>
 
+        <!-- Прямая линия -->
         <MenuItem Header="Прямая линия"
-              IsCheckable="True"
-              IsChecked="{Binding PlacementTarget.DataContext.RoutingMode, RelativeSource={RelativeSource AncestorType=ContextMenu}, Mode=TwoWay, 
-            Converter={StaticResource EnumToBoolConverter}, ConverterParameter={x:Static models:LinkRoutingMode.Direct}}" />
+          IsChecked="{Binding PlacementTarget.DataContext.RoutingMode, RelativeSource={RelativeSource AncestorType=ContextMenu}, Mode=OneWay, 
+            Converter={StaticResource EnumToBoolConverter}, ConverterParameter={x:Static models:LinkRoutingMode.Direct}}"
+          Command="{Binding PlacementTarget.Tag.DataContext.SetLinksRoutingModeCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}">
+            <MenuItem.CommandParameter>
+                <MultiBinding Converter="{StaticResource PassThroughMultiConverter}">
+                    <Binding Path="PlacementTarget.Tag.SelectedItems" RelativeSource="{RelativeSource AncestorType=ContextMenu}" />
+                    <Binding Source="{x:Static models:LinkRoutingMode.Direct}" />
+                </MultiBinding>
+            </MenuItem.CommandParameter>
+        </MenuItem>
 
+        <!-- Ортогональная (90°) -->
         <MenuItem Header="Ортогональная (90°)"
-              IsCheckable="True"
-              IsChecked="{Binding PlacementTarget.DataContext.RoutingMode, RelativeSource={RelativeSource AncestorType=ContextMenu}, Mode=TwoWay, 
-            Converter={StaticResource EnumToBoolConverter}, ConverterParameter={x:Static models:LinkRoutingMode.Orthogonal}}" />
+          IsChecked="{Binding PlacementTarget.DataContext.RoutingMode, RelativeSource={RelativeSource AncestorType=ContextMenu}, Mode=OneWay, 
+            Converter={StaticResource EnumToBoolConverter}, ConverterParameter={x:Static models:LinkRoutingMode.Orthogonal}}"
+          Command="{Binding PlacementTarget.Tag.DataContext.SetLinksRoutingModeCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}">
+            <MenuItem.CommandParameter>
+                <MultiBinding Converter="{StaticResource PassThroughMultiConverter}">
+                    <Binding Path="PlacementTarget.Tag.SelectedItems" RelativeSource="{RelativeSource AncestorType=ContextMenu}" />
+                    <Binding Source="{x:Static models:LinkRoutingMode.Orthogonal}" />
+                </MultiBinding>
+            </MenuItem.CommandParameter>
+        </MenuItem>
 
+        <!-- Со скосами (45°) -->
         <MenuItem Header="Со скосами (45°)"
-              IsCheckable="True"
-              IsChecked="{Binding PlacementTarget.DataContext.RoutingMode, RelativeSource={RelativeSource AncestorType=ContextMenu}, Mode=TwoWay, 
-            Converter={StaticResource EnumToBoolConverter}, ConverterParameter={x:Static models:LinkRoutingMode.Diagonal45}}" />
+          IsChecked="{Binding PlacementTarget.DataContext.RoutingMode, RelativeSource={RelativeSource AncestorType=ContextMenu}, Mode=OneWay, 
+            Converter={StaticResource EnumToBoolConverter}, ConverterParameter={x:Static models:LinkRoutingMode.Diagonal45}}"
+          Command="{Binding PlacementTarget.Tag.DataContext.SetLinksRoutingModeCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}">
+            <MenuItem.CommandParameter>
+                <MultiBinding Converter="{StaticResource PassThroughMultiConverter}">
+                    <Binding Path="PlacementTarget.Tag.SelectedItems" RelativeSource="{RelativeSource AncestorType=ContextMenu}" />
+                    <Binding Source="{x:Static models:LinkRoutingMode.Diagonal45}" />
+                </MultiBinding>
+            </MenuItem.CommandParameter>
+        </MenuItem>
 
+        <Separator />
 
+        <MenuItem Header="Сбросить сдвиг сегментов"
+          Command="{Binding PlacementTarget.Tag.DataContext.ResetLinkOffsetsCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+          CommandParameter="{Binding PlacementTarget.Tag.SelectedItems, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
 
         <Separator/>
 

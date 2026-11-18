@@ -1,4 +1,5 @@
 ﻿using Smec.Models;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Windows;
 using System.Windows.Media;
@@ -14,7 +15,7 @@ namespace Smec.ViewModels
         private readonly GridSettings _gridSettings;
 
         // Коллекция экранных точек для привязки к <Polyline Points="{Binding ScreenPoints}" />
-        public PointCollection ScreenPoints { get; private set; } = new();
+        public PointCollection ScreenPoints { get; private set; } = [];
 
 
         // Прокси-свойства из модели для XAML DataTrigger в LinkStyle
@@ -24,6 +25,33 @@ namespace Smec.ViewModels
 
         public bool Activity => Model.Activity;
 
+
+        // Базовые координаты сегментов (точки отсчёта для ручного сдвига)
+        private double _baseHandle1X;
+        private double _baseHandle1Y;
+        private double _baseHandle2Y;
+        private double _baseHandle3X;
+
+        public ObservableCollection<LinkHandleVm> Handles { get; } = [];
+
+        /// <summary>
+        /// Возвращает true, если у провода есть ручные сдвиги сегментов.
+        /// </summary>
+        public bool HasSegmentOffsets => Model.SegmentOffsets.Any(o => Math.Abs(o) > 0.001);
+
+        /// <summary>
+        /// Сбрасывает все ручные сдвиги сегментов к автоматической трассе.
+        /// </summary>
+        public void ResetSegmentOffsets()
+        {
+            if (!HasSegmentOffsets)
+                return;
+
+            Model.ResetSegmentOffsets();
+            OnPropertyChanged(nameof(HasSegmentOffsets));
+        }
+
+
         // Состояние выделения в UI (привязано к последнему DataTrigger в LinkStyle)
         public bool IsSelected
         {
@@ -31,11 +59,13 @@ namespace Smec.ViewModels
             set
             {
                 if (SetProperty(ref field, value))
-                    OnPropertyChanged(nameof(HasDraggableSegment));
+                {
+                    UpdateHandles();
+                }
             }
         }
 
-        // Режим соединения
+        // Режим соединенеия
         public LinkRoutingMode RoutingMode
         {
             get => Model.RoutingMode;
@@ -43,46 +73,127 @@ namespace Smec.ViewModels
             {
                 if (Model.RoutingMode != value)
                 {
-                    Model.ChannelOffset = 0;
+                    Model.Points.Clear();
+                    Model.ResetSegmentOffsets();
                     Model.RoutingMode = value;
                     OnPropertyChanged();
+                    RebuildPoints();
                 }
             }
         }
 
-        private double _baseMidX;
-        private double _baseMidY;
-
-
-        public bool HasDraggableSegment =>
-            IsSelected && Model.RoutingMode == LinkRoutingMode.Orthogonal && GetControlledSegmentIndex() >= 0;
-
-        public bool IsHorizontalSegment
+        private void OnEndpointTransformChanged()
         {
-            get
+            if (Model.SegmentOffsets.Any(o => Math.Abs(o) > 0.001))
             {
-                int idx = GetControlledSegmentIndex();
-                return idx >= 0 && Math.Abs(ScreenPoints[idx].Y - ScreenPoints[idx + 1].Y) < 0.5;
+                // ResetSegmentOffsets() вызовет CollectionChanged -> OnModelPropertyChanged -> RebuildPoints()
+                Model.ResetSegmentOffsets();
+            }
+            else
+            {
+                RebuildPoints();
             }
         }
 
-        public double HandleX
+        // --- Единый метод перетаскивания для всех трёх ручек (индексы 0, 1, 2) ---
+        public void MoveHandleTo(int handleIndex, Point targetPos)
         {
-            get
+            double grid = _gridSettings.GridSize;
+            bool isHor1 = GetControlledSegmentIndex() is int idx && idx >= 0 &&
+                          Math.Abs(ScreenPoints[idx].Y - ScreenPoints[idx + 1].Y) < 0.5;
+
+            double rawOffsetCells = handleIndex switch
             {
-                int idx = GetControlledSegmentIndex();
-                return idx >= 0 ? (ScreenPoints[idx].X + ScreenPoints[idx + 1].X) / 2.0 : 0;
+                1 => (targetPos.Y - _baseHandle2Y) / grid,
+                2 => (targetPos.X - _baseHandle3X) / grid,
+                _ => isHor1
+                        ? (targetPos.Y - _baseHandle1Y) / grid
+                        : (targetPos.X - _baseHandle1X) / grid
+            };
+
+            Model.SetSegmentOffset(handleIndex, Math.Round(rawOffsetCells * 4.0) / 4.0);
+        }
+
+        // Индекс сегмента, которым управляет ChannelOffset
+        private int GetControlledSegmentIndex()
+        {
+            if (ScreenPoints.Count == 3)
+                return Math.Abs(ScreenPoints[0].X - ScreenPoints[1].X) < 0.5 ? 0 : 1;
+
+            if (ScreenPoints.Count == 4)
+            {
+                bool isHor1 = Math.Abs(GetPinExitDirection(_nodeA, Model.PortA.PinNumber).X) > 0.5;
+                bool isHor2 = Math.Abs(GetPinExitDirection(_nodeB, Model.PortB.PinNumber).X) > 0.5;
+                if (isHor1 == isHor2)
+                    return 1;
+                return isHor1 ? 1 : 2;
+            }
+
+            if (ScreenPoints.Count >= 5)
+            {
+                bool isHor1 = Math.Abs(GetPinExitDirection(_nodeA, Model.PortA.PinNumber).X) > 0.5;
+                return isHor1 ? 1 : ScreenPoints.Count - 3;
+            }
+
+            return -1;
+        }
+
+        private void UpdateHandles()
+        {
+            var p = ScreenPoints;
+
+            if (!IsSelected || Model.RoutingMode != LinkRoutingMode.Orthogonal || p == null || p.Count < 3)
+            {
+                Handles.Clear();
+                return;
+            }
+
+            var next = new List<LinkHandleVm>(3);
+
+            // 1. Основная ручка (индекс 0)
+            int idx1 = GetControlledSegmentIndex();
+            if (idx1 >= 0 && idx1 + 1 < p.Count)
+            {
+                var a = p[idx1];
+                var b = p[idx1 + 1];
+                bool isHor1 = Math.Abs(a.Y - b.Y) < 0.5;
+                next.Add(new LinkHandleVm(0, (a.X + b.X) / 2.0, (a.Y + b.Y) / 2.0, isHor1));
+            }
+
+            // 2 и 3. Дополнительные ручки (индексы 1 и 2) для 6-точечного обходного провода
+            if (p.Count == 6)
+            {
+                var p2 = p.ElementAt(2);
+                var p3 = p.ElementAt(3);
+                var p4 = p.ElementAt(4);
+
+                // Ручка 2 (индекс 1): горизонтальный пролёт между точками 2 и 3
+                next.Add(new LinkHandleVm(1, (p2.X + p3.X) / 2.0, (p2.Y + p3.Y) / 2.0, true));
+
+                // Ручка 3 (индекс 2): вторая вертикаль между точками 3 и 4
+                next.Add(new LinkHandleVm(2, (p3.X + p4.X) / 2.0, (p3.Y + p4.Y) / 2.0, false));
+            }
+
+            // Обновляем координаты существующих ручек на месте, чтобы Thumb не терял захват мыши
+            if (Handles.Count == next.Count)
+            {
+                for (int i = 0; i < next.Count; i++)
+                {
+                    Handles[i].X = next[i].X;
+                    Handles[i].Y = next[i].Y;
+                    Handles[i].IsHorizontal = next[i].IsHorizontal;
+                }
+            }
+            else
+            {
+                Handles.Clear();
+                foreach (var h in next)
+                    Handles.Add(h);
             }
         }
 
-        public double HandleY
-        {
-            get
-            {
-                int idx = GetControlledSegmentIndex();
-                return idx >= 0 ? (ScreenPoints[idx].Y + ScreenPoints[idx + 1].Y) / 2.0 : 0;
-            }
-        }
+
+
 
         public LinkVm(Link model, NodeVm nodeA, NodeVm nodeB, GridSettings gridSettings)
         {
@@ -106,37 +217,16 @@ namespace Smec.ViewModels
             RebuildPoints();
         }
 
-        /// <summary>
-        /// Сдвигает центральный сегмент в позицию курсора с привязкой к полушагу сетки (0.5 клетки).
-        /// </summary>
-        public void MoveSegmentTo(Point targetPos)
-        {
-            double grid = _gridSettings.GridSize;
-            double rawOffsetCells = IsHorizontalSegment
-                ? (targetPos.Y - _baseMidY) / grid
-                : (targetPos.X - _baseMidX) / grid;
-
-            Model.ChannelOffset = Math.Round(rawOffsetCells * 2.0) / 2.0;
-        }
-
-        private void OnEndpointTransformChanged() => RebuildPoints();
-
-        private void OnGridSettingsChanged(object? sender, PropertyChangedEventArgs e)
-        {
-            if (e.PropertyName == nameof(GridSettings.GridSize))
-                RebuildPoints();
-        }
-
         private void OnModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
-            if (e.PropertyName is nameof(Link.RoutingMode) or nameof(Link.ChannelOffset))
+            if (e.PropertyName is nameof(Link.RoutingMode) or nameof(Link.SegmentOffsets))
             {
                 OnPropertyChanged(e.PropertyName);
+                OnPropertyChanged(nameof(HasSegmentOffsets));
                 RebuildPoints();
                 return;
             }
 
-            // Пробрасываем уведомление в UI, чтобы сработали соответствующие DataTrigger в LinkStyle
             if (e.PropertyName is nameof(Link.State)
                 or nameof(Link.Activity)
                 or nameof(Link.LinkStatus)
@@ -146,8 +236,18 @@ namespace Smec.ViewModels
             }
         }
 
+
+
+        private void OnGridSettingsChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == nameof(GridSettings.GridSize))
+                RebuildPoints();
+        }
+
+
+
         #region Построение линков в разных режимах
-        
+
         /// <summary>
         /// Пересчитывает экранные координаты провода от PortA до PortB
         /// с учётом выбранного режима трассировки (Direct / Orthogonal / Diagonal45) и ручных изгибов.
@@ -190,17 +290,16 @@ namespace Smec.ViewModels
             ScreenPoints = pts;
 
             OnPropertyChanged(nameof(ScreenPoints));
-            OnPropertyChanged(nameof(HasDraggableSegment));
-            OnPropertyChanged(nameof(IsHorizontalSegment));
-            OnPropertyChanged(nameof(HandleX));
-            OnPropertyChanged(nameof(HandleY));
+            UpdateHandles();
         }
 
-        
+
+
+
         /// <summary>
         /// Трассировка со скосами и вертикальным выносом за габариты корпусов (как на классических схемах триггеров).
         /// </summary>
-        private List<Point> BuildDiagonal45Route(Point p1,Vector dir1,Point p2,Vector dir2)
+        private List<Point> BuildDiagonal45Route(Point p1, Vector dir1, Point p2, Vector dir2)
         {
             double grid = _gridSettings.GridSize;
             double stub = grid * 0.5;      // Горизонтальный вылет от кончика пина (половина клетки)
@@ -297,8 +396,12 @@ namespace Smec.ViewModels
             double grid = _gridSettings.GridSize;
             double stub = (_nodeA == _nodeB) ? grid * 0.5 : grid;
 
-            // Если пины лежат на одной прямой (вертикальной или горизонтальной) и пользователь ещё не двигал канал вручную — соединяем напрямую
-            if (Math.Abs(Model.ChannelOffset) < 0.1)
+            double offset1 = Model.GetSegmentOffset(0);
+            double offset2 = Model.GetSegmentOffset(1);
+            double offset3 = Model.GetSegmentOffset(2);
+
+            // Если пины лежат на одной прямой (вертикальной или горизонтальной) и ручных сдвигов нет — соединяем напрямую
+            if (Math.Abs(offset1) < 0.1 && Math.Abs(offset2) < 0.1 && Math.Abs(offset3) < 0.1)
             {
                 if (Math.Abs(p1.X - p2.X) < 0.5 && dir1.X == 0 && dir2.X == 0)
                     return [p1, p2];
@@ -314,7 +417,22 @@ namespace Smec.ViewModels
             bool isHorizontal1 = Math.Abs(dir1.X) > Math.Abs(dir1.Y);
             bool isHorizontal2 = Math.Abs(dir2.X) > Math.Abs(dir2.Y);
 
-            // 1. Оба пина горизонтальные (средний сегмент вертикальный)
+            // Точные верхние и нижние границы корпусов с учётом локального смещения BodyGeometry.Bounds
+            double topA = _nodeA.BodyGeometry.Bounds.IsEmpty
+                ? _nodeA.PixelY - _nodeA.HalfHeight
+                : _nodeA.PixelY + _nodeA.BodyGeometry.Bounds.Top;
+            double bottomA = _nodeA.BodyGeometry.Bounds.IsEmpty
+                ? _nodeA.PixelY + _nodeA.HalfHeight
+                : _nodeA.PixelY + _nodeA.BodyGeometry.Bounds.Bottom;
+
+            double topB = _nodeB.BodyGeometry.Bounds.IsEmpty
+                ? _nodeB.PixelY - _nodeB.HalfHeight
+                : _nodeB.PixelY + _nodeB.BodyGeometry.Bounds.Top;
+            double bottomB = _nodeB.BodyGeometry.Bounds.IsEmpty
+                ? _nodeB.PixelY + _nodeB.HalfHeight
+                : _nodeB.PixelY + _nodeB.BodyGeometry.Bounds.Bottom;
+
+            // 1. Оба пина горизонтальные
             if (isHorizontal1 && isHorizontal2)
             {
                 bool facingEachOther = (dir1.X > 0 && dir2.X < 0 && s1.X <= s2.X) ||
@@ -333,22 +451,39 @@ namespace Smec.ViewModels
                         autoOffset = direction * laneStep * (grid * 0.5);
                     }
 
-                    _baseMidX = baseMidX + autoOffset;
+                    _baseHandle1X = baseMidX + autoOffset;
 
                     double minX = Math.Min(p1.X, p2.X) + grid;
                     double maxX = Math.Max(p1.X, p2.X) - grid;
                     double midX = minX <= maxX
-                        ? Math.Clamp(_baseMidX + Model.ChannelOffset * grid, minX, maxX)
-                        : _baseMidX;
+                        ? Math.Clamp(_baseHandle1X + offset1 * grid, minX, maxX)
+                        : _baseHandle1X;
 
                     return SimplifyPoints([p1, new Point(midX, p1.Y), new Point(midX, p2.Y), p2]);
                 }
 
-                double topA = _nodeA.PixelY - (_nodeA.BodyGeometry.Bounds.IsEmpty ? _nodeA.HalfHeight : _nodeA.BodyGeometry.Bounds.Height / 2.0);
-                double bottomA = _nodeA.PixelY + (_nodeA.BodyGeometry.Bounds.IsEmpty ? _nodeA.HalfHeight : _nodeA.BodyGeometry.Bounds.Height / 2.0);
-                double topB = _nodeB.PixelY - (_nodeB.BodyGeometry.Bounds.IsEmpty ? _nodeB.HalfHeight : _nodeB.BodyGeometry.Bounds.Height / 2.0);
-                double bottomB = _nodeB.PixelY + (_nodeB.BodyGeometry.Bounds.IsEmpty ? _nodeB.HalfHeight : _nodeB.BodyGeometry.Bounds.Height / 2.0);
+                // Перемычка на одном и том же элементе (пины смотрят в одну сторону)
+                if (_nodeA == _nodeB && Math.Sign(dir1.X) == Math.Sign(dir2.X))
+                {
+                    double baseVertX = (dir1.X < 0) ? Math.Min(s1.X, s2.X) : Math.Max(s1.X, s2.X);
+                    _baseHandle1X = baseVertX;
 
+                    double rawVertX = baseVertX + offset1 * grid;
+                    double minStub = grid * 0.25;
+
+                    double vertX = (dir1.X < 0)
+                        ? Math.Min(rawVertX, Math.Min(p1.X, p2.X) - minStub)
+                        : Math.Max(rawVertX, Math.Max(p1.X, p2.X) + minStub);
+
+                    return SimplifyPoints([
+                        p1,
+                new Point(vertX, p1.Y),
+                new Point(vertX, p2.Y),
+                p2
+                    ]);
+                }
+
+                // Обход разных корпусов сверху, снизу или через зазор между ними (6 точек, 3 ручки)
                 double bypassY;
 
                 if (_nodeA != _nodeB && bottomA + grid <= topB)
@@ -370,21 +505,45 @@ namespace Smec.ViewModels
                     bypassY = distAbove <= distBelow ? routeAboveY : routeBelowY;
                 }
 
-                _baseMidY = bypassY;
-                double finalBypassY = bypassY + Model.ChannelOffset * grid;
+                // Ручка 2 (индекс 1): горизонтальный пролёт
+                _baseHandle2Y = bypassY;
+                double finalBypassY = bypassY + offset2 * grid;
 
-                return SimplifyPoints([p1, s1, new Point(s1.X, finalBypassY), new Point(s2.X, finalBypassY), s2, p2]);
+                if (Math.Abs(finalBypassY - p1.Y) < 0.5)
+                    finalBypassY += (p1.Y >= _nodeA.PixelY) ? grid * 0.5 : -grid * 0.5;
+                if (Math.Abs(finalBypassY - p2.Y) < 0.5)
+                    finalBypassY += (p2.Y >= _nodeB.PixelY) ? grid * 0.5 : -grid * 0.5;
+
+                // Ручка 1 (индекс 0): первая вертикаль (возле _nodeA)
+                _baseHandle1X = s1.X;
+                double rawVert1X = s1.X + offset1 * grid;
+                double vert1X = dir1.X > 0
+                    ? Math.Max(rawVert1X, p1.X + grid * 0.25)
+                    : Math.Min(rawVert1X, p1.X - grid * 0.25);
+
+                // Ручка 3 (индекс 2): вторая вертикаль (возле _nodeB)
+                _baseHandle3X = s2.X;
+                double rawVert2X = s2.X + offset3 * grid;
+                double vert2X = dir2.X > 0
+                    ? Math.Max(rawVert2X, p2.X + grid * 0.25)
+                    : Math.Min(rawVert2X, p2.X - grid * 0.25);
+
+                return SimplifyPoints([
+                    p1,
+            new Point(vert1X, p1.Y),
+            new Point(vert1X, finalBypassY),
+            new Point(vert2X, finalBypassY),
+            new Point(vert2X, p2.Y),
+            p2
+                ]);
             }
 
             // 2. Один пин горизонтальный, второй вертикальный (GND / питание)
             if (isHorizontal1 && !isHorizontal2)
             {
                 bool pinFacingWire = (p2.Y >= p1.Y && dir2.Y < 0) || (p2.Y <= p1.Y && dir2.Y > 0);
-                if (pinFacingWire && ((dir1.X > 0 && s2.X >= s1.X) || (dir1.X < 0 && s2.X <= s1.X)) && Math.Abs(Model.ChannelOffset) < 0.1)
+                if (pinFacingWire && ((dir1.X > 0 && s2.X >= s1.X) || (dir1.X < 0 && s2.X <= s1.X)) && Math.Abs(offset1) < 0.1)
                     return SimplifyPoints([p1, new Point(p2.X, p1.Y), p2]);
-
-                double topA = _nodeA.PixelY - (_nodeA.BodyGeometry.Bounds.IsEmpty ? _nodeA.HalfHeight : _nodeA.BodyGeometry.Bounds.Height / 2.0);
-                double bottomA = _nodeA.PixelY + (_nodeA.BodyGeometry.Bounds.IsEmpty ? _nodeA.HalfHeight : _nodeA.BodyGeometry.Bounds.Height / 2.0);
 
                 double turnY;
                 if (p2.Y < topA)
@@ -396,10 +555,9 @@ namespace Smec.ViewModels
                         ? Math.Max(s2.Y, bottomA + grid * 0.5)
                         : Math.Min(s2.Y, topA - grid * 0.5);
 
-                _baseMidX = s1.X;
-                double rawVertX = s1.X + Model.ChannelOffset * grid;
+                _baseHandle1X = s1.X;
+                double rawVertX = s1.X + offset1 * grid;
 
-                // Не позволяем вертикали заходить за кончик пина внутрь корпуса _nodeA
                 double vertX = dir1.X < 0
                     ? Math.Min(rawVertX, p1.X - grid * 0.5)
                     : Math.Max(rawVertX, p1.X + grid * 0.5);
@@ -410,12 +568,10 @@ namespace Smec.ViewModels
             if (!isHorizontal1 && isHorizontal2)
             {
                 bool pinFacingWire = (p1.Y >= p2.Y && dir1.Y < 0) || (p1.Y <= p2.Y && dir1.Y > 0);
-                if (pinFacingWire && ((dir2.X > 0 && s1.X >= s2.X) || (dir2.X < 0 && s1.X <= s2.X)) && Math.Abs(Model.ChannelOffset) < 0.1)
+                if (pinFacingWire && ((dir2.X > 0 && s1.X >= s2.X) || (dir2.X < 0 && s1.X <= s2.X)) && Math.Abs(offset1) < 0.1)
                     return SimplifyPoints([p1, new Point(p1.X, p2.Y), p2]);
 
-                double topB = _nodeB.PixelY - (_nodeB.BodyGeometry.Bounds.IsEmpty ? _nodeB.HalfHeight : _nodeB.BodyGeometry.Bounds.Height / 2.0);
-                double bottomB = _nodeB.PixelY + (_nodeB.BodyGeometry.Bounds.IsEmpty ? _nodeB.HalfHeight : _nodeB.BodyGeometry.Bounds.Height / 2.0);
-
+                // Повторное объявление topB и bottomB удалено — используются переменные из начала метода
                 double turnY;
                 if (p1.Y < topB)
                     turnY = Math.Min(s1.Y, topB - grid * 0.5);
@@ -426,10 +582,9 @@ namespace Smec.ViewModels
                         ? Math.Max(s1.Y, bottomB + grid * 0.5)
                         : Math.Min(s1.Y, topB - grid * 0.5);
 
-                _baseMidX = s2.X;
-                double rawVertX = s2.X + Model.ChannelOffset * grid;
+                _baseHandle1X = s2.X;
+                double rawVertX = s2.X + offset1 * grid;
 
-                // Не позволяем вертикали заходить за кончик пина внутрь корпуса _nodeB
                 double vertX = dir2.X < 0
                     ? Math.Min(rawVertX, p2.X - grid * 0.5)
                     : Math.Max(rawVertX, p2.X + grid * 0.5);
@@ -438,19 +593,17 @@ namespace Smec.ViewModels
             }
 
 
-
             // 3. Оба пина вертикальные (средний сегмент горизонтальный)
-            _baseMidY = SnapToGrid((p1.Y + p2.Y) / 2.0, grid);
+            _baseHandle1Y = SnapToGrid((p1.Y + p2.Y) / 2.0, grid);
 
             double minY = Math.Min(p1.Y, p2.Y) + grid;
             double maxY = Math.Max(p1.Y, p2.Y) - grid;
             double midY = minY <= maxY
-                ? Math.Clamp(_baseMidY + Model.ChannelOffset * grid, minY, maxY)
-                : _baseMidY;
+                ? Math.Clamp(_baseHandle1Y + offset1 * grid, minY, maxY)
+                : _baseHandle1Y;
 
             return SimplifyPoints([p1, new Point(p1.X, midY), new Point(p2.X, midY), p2]);
         }
-
 
 
         private static Vector GetPinExitDirection(NodeVm node, string pinNumber)
@@ -472,32 +625,8 @@ namespace Smec.ViewModels
         private static double SnapToGrid(double value, double grid) => Math.Round(value / grid) * grid;
 
 
-        // Индекс сегмента, которым управляет ChannelOffset
-        private int GetControlledSegmentIndex()
-        {
-            if (ScreenPoints.Count == 3)
-            {
-                // Для Г-образного угла (3 точки) выбираем именно вертикальный сегмент (где X1 == X2)
-                return Math.Abs(ScreenPoints[0].X - ScreenPoints[1].X) < 0.5 ? 0 : 1;
-            }
 
-            if (ScreenPoints.Count == 4)
-            {
-                bool isHor1 = Math.Abs(GetPinExitDirection(_nodeA, Model.PortA.PinNumber).X) > 0.5;
-                bool isHor2 = Math.Abs(GetPinExitDirection(_nodeB, Model.PortB.PinNumber).X) > 0.5;
-                if (isHor1 == isHor2)
-                    return 1;
-                return isHor1 ? 1 : 2;
-            }
 
-            if (ScreenPoints.Count >= 5)
-            {
-                bool isHor1 = Math.Abs(GetPinExitDirection(_nodeA, Model.PortA.PinNumber).X) > 0.5;
-                return isHor1 ? 1 : ScreenPoints.Count - 3;
-            }
-
-            return -1;
-        }
 
 
         /// <summary>
@@ -529,6 +658,7 @@ namespace Smec.ViewModels
             return result;
         }
         #endregion
+
 
         /// <summary>
         /// Освобождает все подписки при удалении провода или очистке схемы.
