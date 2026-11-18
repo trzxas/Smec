@@ -236,7 +236,7 @@
             // 1. Диод (IEC 60617-05)
             Add(new SymbolDefinition
             {
-                SymbolId = "Diode",
+                SymbolId = "Diode_IEC",
                 DisplayName = "Диод",
                 IsFilled = false, // Открытый контур с линией катода и сквозной осью
                                   // Треугольник анода (-0.5..0.5), вертикальная черта катода (0.5) и сквозная линия (-0.5..0.5)
@@ -251,7 +251,7 @@
             // 2. Светодиод LED (IEC 60617-05: диод + две стрелки излучения вверх-вправо)
             Add(new SymbolDefinition
             {
-                SymbolId = "LED",
+                SymbolId = "LED_IEC",
                 DisplayName = "Светодиод",
                 IsFilled = false,
                 BodyPath = "M -0.5,-0.5 L 0.5,0 L -0.5,0.5 Z M 0.5,-0.5 L 0.5,0.5 M -0.5,0 L 0.5,0 " +
@@ -269,7 +269,7 @@
             // 3. Биполярный транзистор NPN (IEC 60617-05)
             Add(new SymbolDefinition
             {
-                SymbolId = "NPN",
+                SymbolId = "NPN_IEC",
                 DisplayName = "Транзистор NPN",
                 IsFilled = false,
                 // Окружность корпуса (радиус 1.0, центр 0.2, 0), вертикальная база (-0.2), линии коллектора и эмиттера + стрелка наружу
@@ -289,7 +289,7 @@
             // 4. Биполярный транзистор PNP (IEC 60617-05)
             Add(new SymbolDefinition
             {
-                SymbolId = "PNP",
+                SymbolId = "PNP_IEC",
                 DisplayName = "Транзистор PNP",
                 IsFilled = false,
                 BodyPath = "M -0.8,0 A 1.0,1.0 0 1 1 1.2,0 A 1.0,1.0 0 1 1 -0.8,0 " +

@@ -42,7 +42,7 @@ namespace Smec.Models
         /// <summary>
         /// Угол поворота элемента в градусах (0, 90, 180, 270).
         /// </summary>
-        public int Rotation { get; set => SetProperty(ref field, value);  }
+        public int Rotation { get; set => SetProperty(ref field, value); }
 
         /// <summary>
         /// Зеркальное отражение по горизонтали (по оси X).
@@ -98,6 +98,23 @@ namespace Smec.Models
         public Dictionary<string, string> Properties { get; set; } = [];
 
 
+
+        /// <summary>
+        /// Универсальное состояние активности элемента (свечение LED, срабатывание реле, замыкание кнопки).
+        /// </summary>
+        public bool IsActive
+        {
+            get;
+            set => SetProperty(ref field, value);
+        } = false;
+
+        [DataMember]
+        public string ActiveColor
+        {
+            get;
+            set => SetProperty(ref field, value);
+        }
+        = "#FF2D2D"; // По умолчанию красный (можно менять для разных индикаторов)
 
         [BsonIgnore]
         [XmlIgnore]
@@ -352,12 +369,14 @@ namespace Smec.Models
         }
 
 
-        // Инициализация состояния перед симуляцией
-        public virtual void InitState() { }
+        // Инициализация перед симуляцией
+        public virtual void Init() { }
 
         // Обновление при симуляции
         public virtual void UpdateState(TimeSpan elapsed) { }
 
+        // Сброс после симуляции
+        public virtual void Reset() { IsActive = false; }
 
         #region Массив Групп портов ДЛЯ XAML тестовый.  Не используем пока!
         // ================================================================= 

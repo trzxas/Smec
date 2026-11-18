@@ -4,6 +4,7 @@
     using Smec.Models;
     using System.Collections.Specialized;
     using System.Globalization;
+    using System.Runtime.CompilerServices;
     using System.Windows;
     using System.Windows.Controls;
 
@@ -21,22 +22,32 @@
         public static IEnumerable<PortGroup> GetItemsSource(DependencyObject element) => (IEnumerable<PortGroup>)element.GetValue(ItemsSourceProperty);
 
 
+        private static readonly ConditionalWeakTable<Panel, NotifyCollectionChangedEventHandler> _handlers = [];
+
         private static void OnItemsSourceChanged(DependencyObject d, DependencyPropertyChangedEventArgs e)
         {
-            if (d is Panel panel)
+            if (d is not Panel panel)
+                return;
+
+            // 1. Корректно отписываемся от старой коллекции, используя сохранённый экземпляр делегата
+            if (e.OldValue is INotifyCollectionChanged oldCollection && _handlers.TryGetValue(panel, out var oldHandler))
             {
-                // Если коллекция реализует INotifyCollectionChanged (например, ObservableCollection), следим за изменениями
-                if (e.OldValue is INotifyCollectionChanged oldCollection)
-                    oldCollection.CollectionChanged -= (s, arg) => UpdatePanelItems(panel, s as IEnumerable<PortGroup>);
-
-                if (e.NewValue is INotifyCollectionChanged newCollection)
-                    newCollection.CollectionChanged += (s, arg) => UpdatePanelItems(panel, s as IEnumerable<PortGroup>);
-
-                UpdatePanelItems(panel, e.NewValue as IEnumerable<PortGroup>);
+                oldCollection.CollectionChanged -= oldHandler;
+                _handlers.Remove(panel);
             }
+
+            // 2. Создаём один экземпляр обработчика, сохраняем его и подписываемся на новую коллекцию
+            if (e.NewValue is INotifyCollectionChanged newCollection)
+            {
+                void newHandler(object? s, NotifyCollectionChangedEventArgs _) => UpdatePanelItems(panel, s as IEnumerable<PortGroup>);
+                _handlers.AddOrUpdate(panel, newHandler);
+                newCollection.CollectionChanged += newHandler;
+            }
+
+            UpdatePanelItems(panel, e.NewValue as IEnumerable<PortGroup>);
         }
 
-        private static void UpdatePanelItems(Panel panel, IEnumerable<PortGroup> collection)
+        private static void UpdatePanelItems(Panel panel, IEnumerable<PortGroup>? collection)
         {
 
             // Удаляем старые динамические элементы типа PortGroup, оставляя остальные

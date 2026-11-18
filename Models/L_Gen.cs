@@ -67,11 +67,11 @@ namespace Smec.Models
             base.CopyPropertiesTo(target);
         }
 
-        public override void InitState()
+        public override void Init()
         {
             _lastUpdated = TimeSpan.Zero;
             Ports[0].State = PortState.Low;
-            base.InitState();
+            base.Init();
         }
 
         public override void UpdateState(TimeSpan elapsed)

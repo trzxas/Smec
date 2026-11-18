@@ -279,7 +279,7 @@ namespace Smec.ViewModels
                 Vector dirA = GetPinExitDirection(_nodeA, Model.PortA.PinNumber);
                 Vector dirB = GetPinExitDirection(_nodeB, Model.PortB.PinNumber);
 
-                var route = Model.RoutingMode == LinkRoutingMode.Diagonal45
+                var route = Model.RoutingMode == LinkRoutingMode.Diagonal
                     ? BuildDiagonal45Route(startPt, dirA, endPt, dirB)
                     : BuildOrthogonalRoute(startPt, dirA, endPt, dirB);
 

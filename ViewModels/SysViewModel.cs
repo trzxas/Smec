@@ -287,6 +287,9 @@ namespace Smec.ViewModels
             StockList.Add(CreateNodeVmForStock<L4XOR>());
             StockList.Add(CreateNodeVmForStock<L8XOR>());
 
+            StockList.Add(CreateNodeVmForStock<Diode>());
+            StockList.Add(CreateNodeVmForStock<LED>());
+
             StockList.Add(CreateNodeVmForStock<Resistor>());
             StockList.Add(CreateNodeVmForStock<Capacitor>());
             StockList.Add(CreateNodeVmForStock<Inductor>());

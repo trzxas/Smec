@@ -21,7 +21,7 @@ namespace Smec.Models
             });
         }
 
-        public override void InitState()
+        public override void Init()
         {
             // Устанавливаем начальное состояние единственного порта в Low
             Ports[0]?.State = PortState.Low;

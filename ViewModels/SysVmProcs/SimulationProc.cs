@@ -218,7 +218,7 @@ namespace Smec.ViewModels
             {
                 foreach (var node in model.Nodes)
                 {
-                    node?.InitState();
+                    node?.Init();
                 }
             }
 
@@ -289,7 +289,7 @@ namespace Smec.ViewModels
                 {
                     if (node == null) continue;
 
-                    // Сюда можно добавить node.ResetState()
+                    node.Reset();
 
                     if (node.Ports == null) continue;
 

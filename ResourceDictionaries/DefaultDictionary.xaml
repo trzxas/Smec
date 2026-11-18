@@ -14,9 +14,10 @@
                     >
 
     <!--<help:BindingProxy x:Key="VmProxy" Data="{help:WindowDataContextBinding}"/>-->
+    <BooleanToVisibilityConverter x:Key="BoolToVis" />
     <cv:SideEnumToGridConverter x:Key="EnumSideConverter"/>
     <cv:EnumToBoolConverter x:Key="EnumToBoolConverter" />
-    <BooleanToVisibilityConverter x:Key="BoolToVis" />
+    <cv:ColorToBrushConverter x:Key="ColorToBrushConverter"/>
     <cv:PassThroughMultiConverter x:Key="PassThroughMultiConverter" />
 
 
@@ -30,8 +31,7 @@
                                       FallbackTemplateKey="DefaultBodyTemplate" />
 
 
-    <sys:Double x:Key="PinLen">6.0</sys:Double>
-    <sys:Double x:Key="nPinLen">-6.0</sys:Double>
+
 
     <SolidColorBrush x:Key="DefaultBrush" Color="Gray" po:Freeze="True"/>
     <SolidColorBrush x:Key="LowBrush" Color="Navy" po:Freeze="True"/>
@@ -162,7 +162,7 @@
 
 
 
-    <DataTemplate x:Key="CircleDecorator">
+    <!--<DataTemplate x:Key="CircleDecorator">
         <Ellipse Width="4" Height="4" 
          Fill="White"
          Stroke="{Binding (TextElement.Foreground), RelativeSource={RelativeSource AncestorType=ContentPresenter}}" 
@@ -186,7 +186,7 @@
         <Path Data="M 0 0 L 4 2 L 0 4 Z" 
       Margin="0 -2" 
       Fill="{Binding (TextElement.Foreground), RelativeSource={RelativeSource AncestorType=ContentPresenter}}"/>
-    </DataTemplate>
+    </DataTemplate>-->
 
 
     <!-- Стили для Components -->
@@ -210,6 +210,10 @@
             </DataTrigger>
             <DataTrigger Binding="{Binding IsFilled}" Value="False">
                 <Setter Property="Fill" Value="{x:Null}" />
+            </DataTrigger>
+            <!-- Подсветка активного элемента (LED, лампа, индикатор и т.д.) -->
+            <DataTrigger Binding="{Binding Model.IsActive}" Value="True">
+                <Setter Property="Fill" Value="{Binding Model.ActiveColor, Converter={StaticResource ColorToBrushConverter}}"  />
             </DataTrigger>
         </Style.Triggers>
     </Style>
@@ -503,12 +507,12 @@
         <!-- Со скосами (45°) -->
         <MenuItem Header="Со скосами (45°)"
           IsChecked="{Binding PlacementTarget.DataContext.RoutingMode, RelativeSource={RelativeSource AncestorType=ContextMenu}, Mode=OneWay, 
-            Converter={StaticResource EnumToBoolConverter}, ConverterParameter={x:Static models:LinkRoutingMode.Diagonal45}}"
+            Converter={StaticResource EnumToBoolConverter}, ConverterParameter={x:Static models:LinkRoutingMode.Diagonal}}"
           Command="{Binding PlacementTarget.Tag.DataContext.SetLinksRoutingModeCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}">
             <MenuItem.CommandParameter>
                 <MultiBinding Converter="{StaticResource PassThroughMultiConverter}">
                     <Binding Path="PlacementTarget.Tag.SelectedItems" RelativeSource="{RelativeSource AncestorType=ContextMenu}" />
-                    <Binding Source="{x:Static models:LinkRoutingMode.Diagonal45}" />
+                    <Binding Source="{x:Static models:LinkRoutingMode.Diagonal}" />
                 </MultiBinding>
             </MenuItem.CommandParameter>
         </MenuItem>
