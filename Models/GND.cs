@@ -16,7 +16,7 @@ namespace Smec.Models
             Ports.Add(new NodePort
             {
                 PinNumber = "1",
-                Mode = PortMode.In,
+                Mode = PortMode.Out,
                 Side = SidePosition.Top
             });
         }

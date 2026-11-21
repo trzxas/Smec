@@ -10,12 +10,8 @@ namespace Smec.Models
     public abstract class L_OR : LogicGateNode
     {
         protected override string FamilyPrefix => "OR";
-       
-        public override void UpdateState(TimeSpan elapsed)
-        {
-            bool result = Ports.Where(p => p.Mode == PortMode.In).Any(p => p.State == PortState.Pos);
-            SetOutputs(result);
-        }
+
+        public override void UpdateState(TimeSpan elapsed) => SetOutputs(InputPorts.Any(IsLogicHigh));
     }
 
     public class L2OR : L_OR { protected override int InputCount => 2; }
@@ -27,12 +23,8 @@ namespace Smec.Models
     public abstract class L_AND : LogicGateNode
     {
         protected override string FamilyPrefix => "AND";
-       
-        public override void UpdateState(TimeSpan elapsed)
-        {
-            bool result = !Ports.Where(p => p.Mode == PortMode.In).Any(p => p.State == PortState.Low);
-            SetOutputs(result);
-        }
+
+        public override void UpdateState(TimeSpan elapsed) => SetOutputs(InputPorts.All(IsLogicHigh));
     }
 
     public class L2AND : L_AND { protected override int InputCount => 2; }
@@ -44,12 +36,8 @@ namespace Smec.Models
     public abstract class L_XOR : LogicGateNode
     {
         protected override string FamilyPrefix => "XOR";
-       
-        public override void UpdateState(TimeSpan elapsed)
-        {
-            int highCount = Ports.Where(p => p.Mode == PortMode.In).Count(p => p.State == PortState.Pos);
-            SetOutputs(highCount % 2 == 1); // Нечётное число единиц на входах
-        }
+
+        public override void UpdateState(TimeSpan elapsed) => SetOutputs(InputPorts.Count(IsLogicHigh) % 2 == 1);
     }
 
     public class L2XOR : L_XOR { protected override int InputCount => 2; }

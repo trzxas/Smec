@@ -425,7 +425,7 @@
                     </ListBox>
 
                     <!-- Слой узловых точек (сварки) в местах разветвления проводов -->
-                    <ItemsControl Name="JunctionPointsLayer" ItemsSource="{Binding Junctions}" IsHitTestVisible="False">
+                    <ItemsControl Name="JunctionPointsLayer"  ItemsSource="{Binding Junctions}" IsHitTestVisible="False">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
                                 <Canvas />
@@ -440,22 +440,9 @@
                         <ItemsControl.ItemTemplate>
                             <DataTemplate DataType="{x:Type vm:JunctionVm}">
                                 <!-- Залитый кружок 4x4 px строго по центру точки (X, Y) -->
-                                <Ellipse Width="4" Height="4" Margin="-2,-2,0,0">
-                                    <Ellipse.Style>
-                                        <Style TargetType="Ellipse">
-                                            <Setter Property="Fill" Value="{StaticResource DefaultBrush}" />
-                                            <Style.Triggers>
-                                                <!-- Повторяем цвета логических уровней из LinkStyle -->
-                                                <DataTrigger Binding="{Binding State}" Value="Low">
-                                                    <Setter Property="Fill" Value="{StaticResource LowBrush}" />
-                                                </DataTrigger>
-                                                <DataTrigger Binding="{Binding State}" Value="High">
-                                                    <Setter Property="Fill" Value="{StaticResource PosBrush}" />
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </Ellipse.Style>
-                                </Ellipse>
+                                <Ellipse Width="4" Height="4" Margin="-2,-2,0,0" StrokeThickness="0"
+                                         Style="{StaticResource BaseSignalShapeStyle}" 
+                                         Fill="{Binding Stroke, RelativeSource={RelativeSource Self}}"/>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>

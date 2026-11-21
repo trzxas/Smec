@@ -4,7 +4,7 @@ using System.Text;
 
 namespace Smec.Models
 {
-    public class Diode : Node
+    public class Diode : TwoTerminalNode
     {
 
         public override string CategoryName => nameof(Diode);
@@ -14,19 +14,35 @@ namespace Smec.Models
 
         protected override void CreatePorts()
         {
-            Ports.Add(new NodePort() { Mode = PortMode.InOut,PinNumber="1", Side = SidePosition.Top });
-            Ports.Add(new NodePort() { Mode = PortMode.InOut,PinNumber="2", Side = SidePosition.Bottom });
+            Ports.Add(new NodePort { Mode = PortMode.InOut, PinNumber = "1", Side = SidePosition.Left });    // Анод
+            Ports.Add(new NodePort { Mode = PortMode.InOut, PinNumber = "2", Side = SidePosition.Right }); // Катод
         }
 
-        /// <summary>
-        /// Проверяет, открыт ли диод (на аноде высокий уровень, на катоде — низкий).
-        /// </summary>
-        protected bool IsForwardBiased() =>
-            Ports.Count >= 2 && Ports[0].State == PortState.Pos && Ports[1].State == PortState.Low;
+        // 1. Когда один вывод свободен: пропускаем High с анода (0) на катод (1), или Low с катода (1) на анод (0)
+        protected override PortState ComputeDirectionalOutput(int sourceIndex, PortState inputState, TimeSpan elapsed) =>
+            (sourceIndex, inputState) switch
+            {
+                (0, PortState.High or PortState.WeakHigh) => inputState, // Прямой ток: Анод -> Катод
+                (1, PortState.Low or PortState.WeakLow) => inputState,   // Обратная подтяжка: Катод -> Анод
+                _ => PortState.Undefined                                 // Заперт!
+            };
 
-        public override void UpdateState(TimeSpan elapsed)
+        // 2. Когда оба вывода подключены (например, WeakHigh на аноде и Low на катоде)
+        protected override (int targetIndex, PortState state) ComputeLoadedOutput(PortState ext0, PortState ext1, TimeSpan elapsed)
         {
-            // Здесь может быть общая логика передачи сигнала через диод (если используется в симуляторе)
+            if (ext0 == PortState.WeakHigh && ext1 is PortState.Low or PortState.WeakLow)
+                return (0, ext1); // Катод притягивает слабо подтянутый анод к земле
+
+            if (ext1 == PortState.WeakLow && ext0 is PortState.High or PortState.WeakHigh)
+                return (1, ext0); // Анод поднимает слабо подтянутый катод
+
+            return (-1, PortState.Undefined);
         }
+
+        protected bool IsForwardConducting() =>
+            Ports.Count >= 2 &&
+            Ports[0].State is PortState.High or PortState.WeakHigh &&
+            Ports[1].State is PortState.Low or PortState.WeakLow;
     }
 }
+

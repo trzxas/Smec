@@ -441,10 +441,10 @@ namespace Smec.ViewModels
             canExecute: _ => !IsSimulating && SelectedNodes.Count > 0);
 
         public RelayCommand ToggleLinksActivityCommand => field ??= new(ToggleLinksActivity, CanModifySelectedLinks);
-        public RelayCommand DeleteLinksCommand => field ??= new(DeleteSelectedLinks, CanModifySelectedLinks);
+        public RelayCommand DeleteLinksCommand => field ??= new(DeleteSelectedLinks, CanDeleteSelectedLinks);
 
         // Новые команды контекстного меню связей
-        public RelayCommand SetLinksRoutingModeCommand => field ??= new(ExecuteSetLinksRoutingMode);
+        public RelayCommand SetLinksRoutingModeCommand => field ??= new(ExecuteSetLinksRoutingMode, CanEditLinkGeometry);
         public RelayCommand ResetLinkOffsetsCommand => field ??= new(ExecuteResetLinkOffsets, CanExecuteResetLinkOffsets);
 
         // Команды симуляции

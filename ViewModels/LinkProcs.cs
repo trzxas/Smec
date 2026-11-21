@@ -85,8 +85,6 @@ namespace Smec.ViewModels
             OnPropertyChanged(nameof(PendingEndPoint));
         }
 
-
-
         /// <summary>
         /// 3. Завершение протягивания (создание постоянного Link или отмена, если порт не выбран)
         /// </summary>
@@ -140,10 +138,8 @@ namespace Smec.ViewModels
         /// <summary>
         /// Поиск ближайшего совместимого пина в заданном радиусе (в пикселях экрана).
         /// </summary>
-        private (NodeVm Node, PinVm Pin, System.Windows.Point ScreenPos)? FindNearestCompatiblePin(
-            PinVm sourcePin,
-            System.Windows.Point mousePosition,
-            double maxDistancePixels)
+        private (NodeVm Node, PinVm Pin, System.Windows.Point ScreenPos)? 
+            FindNearestCompatiblePin(PinVm sourcePin, System.Windows.Point mousePosition, double maxDistancePixels)
         {
             if (CurrentModel == null)
                 return null;
@@ -194,21 +190,16 @@ namespace Smec.ViewModels
             // Защита от дублирования проводов по ссылке и по паре (Owner + PinNumber)
             bool alreadyExists = CurrentModel.Links.Any(l =>
                 (l.PortA == portA && l.PortB == portB) ||
-                (l.PortA == portB && l.PortB == portA) 
-                // Это лишняя проверка!
-                //|| (l.PortA.Owner == portA.Owner && l.PortA.PinNumber == portA.PinNumber &&
-                // l.PortB.Owner == portB.Owner && l.PortB.PinNumber == portB.PinNumber) 
-                //|| (l.PortA.Owner == portB.Owner && l.PortA.PinNumber == portB.PinNumber &&
-                // l.PortB.Owner == portA.Owner && l.PortB.PinNumber == portA.PinNumber)
+                (l.PortA == portB && l.PortB == portA)
+                 // Это лишняя проверка!
+                 //|| (l.PortA.Owner == portA.Owner && l.PortA.PinNumber == portA.PinNumber &&
+                 // l.PortB.Owner == portB.Owner && l.PortB.PinNumber == portB.PinNumber) 
+                 //|| (l.PortA.Owner == portB.Owner && l.PortA.PinNumber == portB.PinNumber &&
+                 // l.PortB.Owner == portA.Owner && l.PortB.PinNumber == portA.PinNumber)
                  );
 
             return !alreadyExists;
         }
-
-
-        
-
-
 
 
         public void RemoveLinks(IEnumerable<LinkVm> linksToRemove)
@@ -217,29 +208,35 @@ namespace Smec.ViewModels
 
             foreach (var link in linksToRemove.ToList())
             {
-                link.Model.RemoveLogicalConnection();
                 CurrentModel.Links.Remove(link.Model);
             }
         }
 
         // 1. Общий хелпер извлечения связей из параметра команды
-        private static List<LinkVm> ExtractLinks(object? param) => param switch
+        private static List<LinkVm> ExtractLinks(object? param)
         {
-            // Если список
-            System.Collections.IList list => [.. list.OfType<LinkVm>()],
-            // Если одиночный
-            LinkVm singleLink => [singleLink],
-            // На всякий случай
-            _ => []
-        };
+            if (param is object[] arr)
+            {
+                var selected = arr.OfType<System.Collections.IList>().SelectMany(l => l.OfType<LinkVm>()).ToList();
+                if (selected.Count > 0) return selected;
 
-        // 2. Общая проверка возможности изменения/удаления выделенных связей
-        public bool CanModifySelectedLinks(object? param)
+                return [.. arr.OfType<LinkVm>()];
+            }
+
+            return param switch
+            {
+                System.Collections.IList list => [.. list.OfType<LinkVm>()],
+                LinkVm singleLink => [singleLink],
+                _ => []
+            };
+        }
+
+        // 2. Проверка возможности удаления выделенных связей
+        public bool CanDeleteSelectedLinks(object? param)
         {
             if (IsSimulating || CurrentModel == null) return false;
             return ExtractLinks(param).Count > 0;
         }
-
         // 3. Метод удаления связей
         public void DeleteSelectedLinks(object? param)
         {
@@ -252,10 +249,18 @@ namespace Smec.ViewModels
             }
         }
 
-        // 4. Метод переключения активности (Activity) связей
+
+        // Проверка возможности активации/деактивации выделенных связей (разрешено в покое и на паузе)
+        public bool CanModifySelectedLinks(object? param)
+        {
+            if ((IsSimulating && !IsPaused) || CurrentModel == null) return false;
+            return ExtractLinks(param).Count > 0;
+        }
+
+        // Метод переключения активности (Activity) связей
         public void ToggleLinksActivity(object? param)
         {
-            if (IsSimulating || CurrentModel == null) return;
+            if ((IsSimulating && !IsPaused) || CurrentModel == null) return;
 
             var links = ExtractLinks(param);
             if (links.Count == 0) return;
@@ -264,6 +269,28 @@ namespace Smec.ViewModels
             foreach (var link in links)
             {
                 link.Model.Activity = targetState;
+            }
+
+            // Если схема на паузе — мгновенно пересчитываем цепи и обновляем цвета проводов
+            if (IsPaused)
+            {
+                foreach (var link in CurrentModel.Links.Where(l => !l.Activity))
+                    link.ResetSimulatedState();
+
+                foreach (var node in CurrentModel.Nodes)
+                {
+                    foreach (var port in node.Ports)
+                    {
+                        if (port.Mode == PortMode.In || (port.Mode == PortMode.InOut && !port.IsDriving))
+                            port.State = PortState.Undefined;
+                    }
+                }
+
+                BuildElectricalNets();
+                foreach (var net in _compiledNets)
+                    net.Evaluate();
+
+                UpdateJunctions();
             }
         }
 
@@ -287,6 +314,8 @@ namespace Smec.ViewModels
             foreach (var link in ExtractLinks(parameter))
                 link.ResetSegmentOffsets();
         }
+
+        private bool CanEditLinkGeometry(object? param) =>!IsSimulating && CurrentModel != null;
 
         #endregion
 

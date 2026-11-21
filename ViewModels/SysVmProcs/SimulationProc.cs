@@ -13,7 +13,7 @@ namespace Smec.ViewModels
         private CancellationTokenSource? _cts;
         private Timer? _uiTimer;
 
-        private const int UiUpdatePeriodMs = 100; 
+        private const int UiUpdatePeriodMs = 100;
         private const int SimTickPeriodMs = 20;
 
         [DataMember]
@@ -22,6 +22,10 @@ namespace Smec.ViewModels
             get;
             set => SetProperty(ref field, value);
         }
+
+        private List<ElectricalNet> _compiledNets = [];
+
+
 
         public bool IsSimulating
         {
@@ -165,6 +169,7 @@ namespace Smec.ViewModels
                 else
                     _pauseEvent.Set();
             }
+            CommandManager.InvalidateRequerySuggested(); // Обновляет доступность пункта меню при паузе/снятии с паузы
         }
 
         public async Task StopSimulationAsync()
@@ -207,7 +212,6 @@ namespace Smec.ViewModels
         }
 
 
-
         public void PreSimulate()
         {
             var model = CurrentModel;
@@ -215,41 +219,16 @@ namespace Smec.ViewModels
 
             // 1. Сначала узлы выставляют свои стартовые состояния
             if (model.Nodes != null)
+                foreach (var node in model.Nodes) node?.Init();
+
+            // 2. Компилируем линии одинакового потенциала (ElectricalNets) один раз перед стартом
+            BuildElectricalNets();
+
+            // 3. Сразу вычисляем начальные потенциалы на всех проводах и входах до первого такта
+            foreach (var net in _compiledNets)
             {
-                foreach (var node in model.Nodes)
-                {
-                    node?.Init();
-                }
+                net.Evaluate();
             }
-
-            // 2. Затем линки связывают порты и сразу передают стартовые состояния на входы
-            if (model.Links != null)
-            {
-                foreach (var link in model.Links)
-                {
-                    link?.AddLogicalConnection();
-                }
-            }
-        }
-
-        private Random _random = new();
-        private void DoRandomStateChange()
-        {
-            var model = CurrentModel;
-            int i = _random.Next(0, 2);
-
-            var rnd = _random.NextDouble();
-            switch (rnd)
-            {
-                case < 0.2:
-                    model?.Nodes[0].Ports[i].State = PortState.Low;
-                    break;
-                case > 0.95:
-                    model?.Nodes[0].Ports[i].State = PortState.Pos;
-                    break;
-          
-            }
-
         }
 
         public void SimulateTick()
@@ -257,14 +236,13 @@ namespace Smec.ViewModels
             var model = CurrentModel; // Копируем ссылку в локальную переменную (потокобезопасно)
             if (model?.Nodes == null) return;
 
-            // Вносим случайные изменения состояния портов (для демонстрации)
-            //DoRandomStateChange();
-
-            // проходимся по всем элементам и обновляем их состояние
+            // 1. Все элементы вычисляют своё новое состояние
             foreach (var item in model.Nodes)
-            {
                 item.UpdateState(_watch.Elapsed);
-            }
+
+            // 2. Все линии одинакового потенциала мгновенно обновляют свои порты и провода
+            foreach (var net in _compiledNets)
+                net.Evaluate();
 
         }
 
@@ -273,16 +251,18 @@ namespace Smec.ViewModels
             var model = CurrentModel;
             if (model == null) return;
 
-            // 1. Сначала разрываем логические связи (сбрасывает _isConnected, цвет и отписывает PropertyChanged)
+            // 1. Очищаем скомпилированные цепи и сбрасываем визуальное состояние всех проводов
+            _compiledNets.Clear();
+
             if (model.Links != null)
             {
                 foreach (var link in model.Links)
                 {
-                    link?.RemoveLogicalConnection();
+                    link?.ResetSimulatedState();
                 }
             }
 
-            // 2. Затем сбрасываем узлы и возвращаем все порты в Undefined
+            // 2. Сбрасываем узлы, активность (свечение LED) и все порты в Undefined
             if (model.Nodes != null)
             {
                 foreach (var node in model.Nodes)
@@ -290,6 +270,7 @@ namespace Smec.ViewModels
                     if (node == null) continue;
 
                     node.Reset();
+                    node.IsActive = false;
 
                     if (node.Ports == null) continue;
 
@@ -298,12 +279,60 @@ namespace Smec.ViewModels
                         if (port == null) continue;
 
                         port.RemoveAllInvocation();
+                        port.IsDriving = false;
                         port.State = PortState.Undefined;
                     }
                 }
             }
         }
 
+        public void BuildElectricalNets()
+        {
+            _compiledNets.Clear();
+            if (CurrentModel?.Links == null) return;
+
+            var activeLinks = CurrentModel.Links
+                .Where(l => l.Activity && l.PortA != null && l.PortB != null)
+                .ToList();
+
+            var adj = new Dictionary<NodePort, List<Link>>();
+            foreach (var link in activeLinks)
+            {
+                if (!adj.ContainsKey(link.PortA)) adj[link.PortA] = [];
+                if (!adj.ContainsKey(link.PortB)) adj[link.PortB] = [];
+                adj[link.PortA].Add(link);
+                adj[link.PortB].Add(link);
+            }
+
+            var visited = new HashSet<NodePort>();
+
+            foreach (var startPort in adj.Keys)
+            {
+                if (!visited.Add(startPort)) continue;
+
+                var net = new ElectricalNet();
+                var linkSet = new HashSet<Link>();
+                var queue = new Queue<NodePort>();
+                queue.Enqueue(startPort);
+
+                while (queue.Count > 0)
+                {
+                    var p = queue.Dequeue();
+                    net.Ports.Add(p);
+
+                    foreach (var link in adj[p])
+                    {
+                        linkSet.Add(link);
+                        var nextPort = link.PortA == p ? link.PortB : link.PortA;
+                        if (visited.Add(nextPort))
+                            queue.Enqueue(nextPort);
+                    }
+                }
+
+                net.Links.AddRange(linkSet);
+                _compiledNets.Add(net);
+            }
+        }
 
     }
 }

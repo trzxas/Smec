@@ -35,8 +35,9 @@
 
     <SolidColorBrush x:Key="DefaultBrush" Color="Gray" po:Freeze="True"/>
     <SolidColorBrush x:Key="LowBrush" Color="Navy" po:Freeze="True"/>
-    <SolidColorBrush x:Key="PosBrush" Color="HotPink" po:Freeze="True"/>
-    <SolidColorBrush x:Key="NegBrush" Color="Blue" po:Freeze="True"/>
+    <SolidColorBrush x:Key="WeakLowBrush" Color="Blue" po:Freeze="True"/>
+    <SolidColorBrush x:Key="WeakHighBrush" Color="LightPink" po:Freeze="True"/>
+    <SolidColorBrush x:Key="HighBrush" Color="HotPink" po:Freeze="True"/>
 
     <SolidColorBrush x:Key="NormalBrush" Color="DodgerBlue" po:Freeze="True"/>
     <SolidColorBrush x:Key="WarningBrush" Color="DarkOrange" po:Freeze="True"/>
@@ -117,26 +118,34 @@
                  HotSpotY="22" />
 
 
+    <!-- Базовый стиль цветов логических уровней для проводов, пинов и узлов Junction -->
+    <Style x:Key="BaseSignalShapeStyle" TargetType="Shape">
+        <Setter Property="Stroke" Value="{StaticResource DefaultBrush}" />
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding State}" Value="Low">
+                <Setter Property="Stroke" Value="{StaticResource LowBrush}" />
+            </DataTrigger>
+            <DataTrigger Binding="{Binding State}" Value="WeakLow">
+                <Setter Property="Stroke" Value="{StaticResource WeakLowBrush}" />
+            </DataTrigger>
+            <DataTrigger Binding="{Binding State}" Value="WeakHigh">
+                <Setter Property="Stroke" Value="{StaticResource WeakHighBrush}" />
+            </DataTrigger>
+            <DataTrigger Binding="{Binding State}" Value="High">
+                <Setter Property="Stroke" Value="{StaticResource HighBrush}" />
+            </DataTrigger>
+            <!--<DataTrigger Binding="{Binding State}" Value="Error">
+                <Setter Property="Stroke" Value="{StaticResource ErrorBrush}"/>
+            </DataTrigger>-->
+        </Style.Triggers>
+    </Style>
+
     <!-- Стиль линии порта -->
-    <Style x:Key="PortLineStyle" TargetType="Shape">
-        <Setter Property="Stroke" Value="{StaticResource DefaultBrush}"/>
+    <Style x:Key="PortLineStyle" TargetType="Shape" BasedOn="{StaticResource BaseSignalShapeStyle}">
         <Setter Property="StrokeThickness" Value="1"/>
         <Setter Property="StrokeEndLineCap" Value="Round"/>
         <Setter Property="ToolTip" Value="{Binding Name}"/>
         <Style.Triggers>
-            <DataTrigger Binding="{Binding State}" Value="Low">
-                <Setter Property="Stroke" Value="{StaticResource LowBrush}"/>
-            </DataTrigger>
-            <DataTrigger Binding="{Binding State}" Value="Pos">
-                <Setter Property="Stroke" Value="{StaticResource PosBrush}"/>
-            </DataTrigger>
-            <DataTrigger Binding="{Binding State}" Value="Neg">
-                <Setter Property="Stroke" Value="{StaticResource NegBrush}"/>
-            </DataTrigger>
-            <DataTrigger Binding="{Binding State}" Value="Error">
-                <Setter Property="Stroke" Value="{StaticResource ErrorBrush}"/>
-            </DataTrigger>
-
             <!-- Лёгкая подсветка при простом наведении мыши (до нажатия кнопки) -->
             <DataTrigger Binding="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=Canvas}}" Value="True">
                 <Setter Property="StrokeThickness" Value="3"/>
@@ -158,35 +167,6 @@
 
         </Style.Triggers>
     </Style>
-
-
-
-
-    <!--<DataTemplate x:Key="CircleDecorator">
-        <Ellipse Width="4" Height="4" 
-         Fill="White"
-         Stroke="{Binding (TextElement.Foreground), RelativeSource={RelativeSource AncestorType=ContentPresenter}}" 
-         StrokeThickness="1" 
-         Margin="0 -2"/>
-    </DataTemplate>
-
-    <DataTemplate x:Key="SlashDecorator">
-        <Line X1="2" X2="-2" Y1="-2" Y2="2" 
-      Stroke="{Binding (TextElement.Foreground), RelativeSource={RelativeSource AncestorType=ContentPresenter}}" 
-      StrokeThickness="1"/>
-    </DataTemplate>
-
-    <DataTemplate x:Key="BackSlashDecorator">
-        <Line X1="-2" X2="2" Y1="-2" Y2="2" 
-      Stroke="{Binding (TextElement.Foreground), RelativeSource={RelativeSource AncestorType=ContentPresenter}}" 
-      StrokeThickness="1"/>
-    </DataTemplate>
-
-    <DataTemplate x:Key="ArrowDecorator">
-        <Path Data="M 0 0 L 4 2 L 0 4 Z" 
-      Margin="0 -2" 
-      Fill="{Binding (TextElement.Foreground), RelativeSource={RelativeSource AncestorType=ContentPresenter}}"/>
-    </DataTemplate>-->
 
 
     <!-- Стили для Components -->
@@ -213,10 +193,15 @@
             </DataTrigger>
             <!-- Подсветка активного элемента (LED, лампа, индикатор и т.д.) -->
             <DataTrigger Binding="{Binding Model.IsActive}" Value="True">
-                <Setter Property="Fill" Value="{Binding Model.ActiveColor, Converter={StaticResource ColorToBrushConverter}}"  />
+                <Setter Property="Fill" Value="{Binding Model.ActiveColor, 
+                            Converter={StaticResource ColorToBrushConverter}}"  />
+                <!--Для тестирования, всегда красный-->
+                <!--<Setter Property="Fill" Value="#FF2D2D"/>-->
             </DataTrigger>
         </Style.Triggers>
     </Style>
+
+
 
     <!-- 2. Стандартный векторный корпус (для всех обычных деталей) -->
     <DataTemplate x:Key="DefaultBodyTemplate" DataType="{x:Type vm:NodeVm}">
@@ -335,22 +320,14 @@
     </DataTemplate>
 
     <!-- Стиль линии связи -->
-    <Style x:Key="LinkStyle" TargetType="Polyline">
+    <Style x:Key="LinkStyle" TargetType="Polyline" BasedOn="{StaticResource BaseSignalShapeStyle}">
         <Setter Property="Stroke" Value="{StaticResource DefaultBrush}"/>
         <Setter Property="StrokeThickness" Value="1"/>
         <Setter Property="ToolTip" Value="{Binding Name}"/>
         <Style.Triggers>
 
             <!-- 1. Цвета логических уровней (свойство Link.State) -->
-            <DataTrigger Binding="{Binding State}" Value="Low">
-                <Setter Property="Stroke" Value="{StaticResource LowBrush}"/>
-            </DataTrigger>
-            <DataTrigger Binding="{Binding State}" Value="Pos">
-                <Setter Property="Stroke" Value="{StaticResource PosBrush}"/>
-            </DataTrigger>
-            <DataTrigger Binding="{Binding State}" Value="Neg">
-                <Setter Property="Stroke" Value="{StaticResource NegBrush}"/>
-            </DataTrigger>
+            <!--Заданы в базовом стиле-->
 
             <!-- 2. Отключение подсветки уровней (привязано к HighlightLinks в SysViewModel через общий ScrollViewer) -->
             <DataTrigger Binding="{Binding DataContext.HighlightLinks, RelativeSource={RelativeSource AncestorType=ScrollViewer}}" Value="False">
@@ -462,8 +439,14 @@
 
     <!-- контекстное меню Линка -->
     <ContextMenu x:Key="LinkContextMenu">
-        <MenuItem Command="{Binding PlacementTarget.Tag.DataContext.ToggleLinksActivityCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
-      CommandParameter="{Binding PlacementTarget.Tag.SelectedItems, RelativeSource={RelativeSource AncestorType=ContextMenu}}">
+        <MenuItem Command="{Binding PlacementTarget.Tag.DataContext.ToggleLinksActivityCommand, 
+            RelativeSource={RelativeSource AncestorType=ContextMenu}}">
+            <MenuItem.CommandParameter>
+                <MultiBinding Converter="{StaticResource PassThroughMultiConverter}">
+                    <Binding Path="PlacementTarget.Tag.SelectedItems" RelativeSource="{RelativeSource AncestorType=ContextMenu}" />
+                    <Binding Path="PlacementTarget.DataContext" RelativeSource="{RelativeSource AncestorType=ContextMenu}" />
+                </MultiBinding>
+            </MenuItem.CommandParameter>
             <MenuItem.Style>
                 <Style TargetType="MenuItem">
                     <Setter Property="Header" Value="Отключить связь"/>

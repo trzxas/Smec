@@ -50,7 +50,6 @@ namespace Smec.Models
                         var link = Links[i];
                         if (link.PortA?.Owner == node || link.PortB?.Owner == node)
                         {
-                            link.RemoveLogicalConnection();
                             Links.RemoveAt(i);
                         }
                     }

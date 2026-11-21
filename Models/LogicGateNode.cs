@@ -44,13 +44,21 @@ namespace Smec.Models
             });
         }
 
+        // --- Универсальные хелперы для всех логических элементов ---
+
+        protected IEnumerable<NodePort> InputPorts => Ports.Where(p => p.Mode == PortMode.In);
+
+        protected static bool IsLogicHigh(NodePort p) => p.State is PortState.High or PortState.WeakHigh;
+        protected static bool IsLogicLow(NodePort p) => p.State is PortState.Low or PortState.WeakLow;
+
+
         /// <summary>
         /// Устанавливает логические уровни на прямом (out[0]) и инвертированном (out[1]) выходах.
         /// </summary>
         protected void SetOutputs(bool result)
         {
-            PortState directState = result ? PortState.Pos : PortState.Low;
-            PortState invertedState = result ? PortState.Low : PortState.Pos;
+            PortState directState = result ? PortState.High : PortState.Low;
+            PortState invertedState = result ? PortState.Low : PortState.High;
 
             int outIndex = 0;
             foreach (var port in Ports)
@@ -63,7 +71,7 @@ namespace Smec.Models
                 else if (outIndex == 1)
                 {
                     port.State = invertedState;
-                    break; // Оба выхода обновлены, дальше цикл не нужен
+                    break;
                 }
 
                 outIndex++;

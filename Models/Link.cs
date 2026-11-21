@@ -100,26 +100,7 @@ namespace Smec.Models
             }
         }
 
-        //// Ручное смещение центрального  сегмента (в клетках сетки, с шагом 0.5)
-        //public double ChannelOffset
-        //{
-        //    get;
-        //    set => SetProperty(ref field, value);
-        //} = 0;
 
-
-        //public double ChannelOffsetY
-        //{
-        //    get;
-        //    set => SetProperty(ref field, value);
-        //} = 0;
-
-
-        //public double ChannelOffset2
-        //{
-        //    get;
-        //    set => SetProperty(ref field, value);
-        //} = 0;
 
         [IgnoreDataMember]
         public ObjectStatus LinkStatus { get; private set; } = ObjectStatus.Normal;
@@ -127,163 +108,36 @@ namespace Smec.Models
         [IgnoreDataMember]
         private bool _isConnected;
 
+       
 
-        /// <summary>
-        /// Текущий логический уровень сигнала на проводе (используется для цвета линии в XAML)
-        /// </summary>
         [IgnoreDataMember]
-        public PortState State
+        public PortState State { get; private set; } = PortState.Undefined;
+
+        /// <summary>
+        /// Вызывается из ElectricalNet.Evaluate() на каждом такте симуляции,
+        /// чтобы обновить цвет и статус провода.
+        /// </summary>
+        public void SetSimulatedState(PortState state, ObjectStatus status)
         {
-            get
+            if (State != state)
             {
-                if (!_isConnected || !Activity || PortA == null || PortB == null) return PortState.Undefined;
-
-                if (CanDrive(PortA) && PortA.State != PortState.Undefined) return PortA.State;
-                if (CanDrive(PortB) && PortB.State != PortState.Undefined) return PortB.State;
-
-                return PortState.Undefined;
+                State = state;
+                OnPropertyChanged(nameof(State));
             }
 
-        }
-
-        public void AddLogicalConnection()
-        {
-            if (_isConnected || !Activity || PortA == null || PortB == null) return;
-
-            // 1. Подписываемся на изменение уровней (StateChanged)
-            PortA.StateChanged -= OnPortAStateChanged;
-            PortB.StateChanged -= OnPortBStateChanged;
-
-            PortA.StateChanged += OnPortAStateChanged;
-            PortB.StateChanged += OnPortBStateChanged;
-
-            // 2. ОБЯЗАТЕЛЬНО подписываемся на PropertyChanged, чтобы ловить смену Mode (In <-> Out)
-            PortA.PropertyChanged -= OnPortPropertyChanged;
-            PortB.PropertyChanged -= OnPortPropertyChanged;
-
-            PortA.PropertyChanged += OnPortPropertyChanged;
-            PortB.PropertyChanged += OnPortPropertyChanged;
-
-            _isConnected = true;
-
-            // Синхронизируем начальное состояние
-            SyncStates();
-        }
-
-        public void RemoveLogicalConnection()
-        {
-            if (!_isConnected) return;
-
-            if (PortA != null)
+            if (LinkStatus != status)
             {
-                PortA.StateChanged -= OnPortAStateChanged;
-                PortA.PropertyChanged -= OnPortPropertyChanged;
+                LinkStatus = status;
+                OnPropertyChanged(nameof(LinkStatus));
             }
-
-            if (PortB != null)
-            {
-                PortB.StateChanged -= OnPortBStateChanged;
-                PortB.PropertyChanged -= OnPortPropertyChanged;
-            }
-
-            _isConnected = false;
-
-            // Возвращаем визуальный вид провода в исходное состояние
-            LinkStatus = ObjectStatus.Normal;
-            OnPropertyChanged(nameof(LinkStatus));
-            OnPropertyChanged(nameof(State));
         }
 
         /// <summary>
-        /// Синхронизирует состояния портов с учетом их ТЕКУЩИХ режимов (In / Out / InOut)
+        /// Сбрасывает визуальное состояние провода при остановке симуляции или отключении связи.
         /// </summary>
-        private void SyncStates()
-        {
-            if (PortA == null || PortB == null) return;
+        public void ResetSimulatedState() =>
+            SetSimulatedState(PortState.Undefined, ObjectStatus.Normal);
 
-            if (!IsConflict())
-            {
-                if (CanDrive(PortA) && CanReceive(PortB))
-                {
-                    PortB.State = PortA.State;
-                }
-                else if (CanDrive(PortB) && CanReceive(PortA))
-                {
-                    PortA.State = PortB.State;
-                }
-            }
-
-            UpdateVisualProperties();
-        }
-
-        private void OnPortAStateChanged(object? sender, PortState newState)
-        {
-            if (!Activity || PortA == null || PortB == null) return;
-
-            // Передаем сигнал от A к B, ТОЛЬКО если A сейчас может выдавать, а B может принимать (и нет КЗ)
-            if (CanDrive(PortA) && CanReceive(PortB) && !IsConflict())
-            {
-                PortB.State = newState;
-            }
-            UpdateVisualProperties();
-        }
-
-        private void OnPortBStateChanged(object? sender, PortState newState)
-        {
-            if (!Activity || PortA == null || PortB == null) return;
-
-            // Передаем сигнал от B к A, ТОЛЬКО если B сейчас может выдавать, а A может принимать (и нет КЗ)
-            if (CanDrive(PortB) && CanReceive(PortA) && !IsConflict())
-            {
-                PortA.State = newState;
-            }
-            UpdateVisualProperties();
-        }
-
-        private void OnPortPropertyChanged(object? sender, PropertyChangedEventArgs e)
-        {
-            if (e.PropertyName == nameof(NodePort.Mode) && _isConnected && Activity)
-            {
-                SyncStates();
-            }
-        }
-
-
-
-        // Может ли порт сейчас выдавать сигнал в линию
-        private static bool CanDrive(NodePort port)
-        {
-            //return port.Mode == PortMode.Out
-            //                || (port.Mode == PortMode.InOut && port.State != PortState.Undefined);
-            return true;
-        }
-
-        // Может ли порт сейчас принимать сигнал из линии
-        private static bool CanReceive(NodePort port)
-        {
-            return true;
-
-            //return port.Mode == PortMode.In
-            //                || port.Mode == PortMode.InOut;
-        }
-
-        private bool IsConflict()
-        {
-            if (PortA == null || PortB == null) return false;
-
-            bool aActive = PortA.Mode == PortMode.Out;//  CanDrive(PortA) && PortA.State != PortState.Undefined;
-            bool bActive = PortB.Mode == PortMode.Out;//  CanDrive(PortB) && PortB.State != PortState.Undefined;
-
-            // КЗ, если оба в режиме передачи с определенным уровнем, и уровни не совпадают
-            return aActive && bActive && PortA.State != PortB.State;
-        }
-
-        private void UpdateVisualProperties()
-        {
-            LinkStatus = (Activity && IsConflict()) ? ObjectStatus.Error : ObjectStatus.Normal;
-            OnPropertyChanged(nameof(LinkStatus));
-            OnPropertyChanged(nameof(State));
-        }
     }
 
 }

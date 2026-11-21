@@ -28,7 +28,7 @@ namespace Smec.Models
 
     public enum PortState
     {
-        Undefined, Low, Pos, Neg
+        Undefined, Low, WeakLow, WeakHigh, High, 
 
     }
 
@@ -37,7 +37,7 @@ namespace Smec.Models
         None, Circle, Slash, BackSlash, Arrow
     }
 
-    
+   
 
     public partial class NodePort : NamedBase, IOwnable<Node>, ICloneable
     {
@@ -110,6 +110,9 @@ namespace Smec.Models
                 _stateChanged?.Invoke(this, field);
             }
         }
+
+        [IgnoreDataMember]
+        public bool IsDriving { get; set; }
 
         [BsonIgnore]
         [XmlIgnore]

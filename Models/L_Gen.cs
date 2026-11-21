@@ -79,7 +79,7 @@ namespace Smec.Models
             if (elapsed - _lastUpdated >= Period)
             {
                 var outPort = Ports[0];
-                outPort.State = outPort.State == PortState.Low ? PortState.Pos : PortState.Low;
+                outPort.State = outPort.State == PortState.Low ? PortState.High : PortState.Low;
                 _lastUpdated = elapsed;
             }
             
