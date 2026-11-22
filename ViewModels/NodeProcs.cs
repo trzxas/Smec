@@ -156,6 +156,72 @@ namespace Smec.ViewModels
             UpdateContentBounds();
         }
 
+        private List<NodeVm> ResolveTargetNodes(object? obj)
+        {
+            if (obj is NodeVm clickedNode)
+                return SelectedNodes.Contains(clickedNode) ? [.. SelectedNodes] : [clickedNode];
+
+            return [.. SelectedNodes];
+        }
+
+        private bool CanTransformNode(object? obj)
+        {
+            if (IsSimulating || CurrentModel == null)
+            {
+                return false;
+            }
+
+            if (Keyboard.FocusedElement is TextBox)
+            {
+                return false;
+            }
+
+            return ResolveTargetNodes(obj).Count > 0;
+        }
+
+
+
+        private void RotateNode(object? obj, int deltaAngle)
+        {
+            var targets = ResolveTargetNodes(obj);
+            if (targets.Count == 0) return;
+
+            foreach (var node in targets)
+            {
+                int effectiveDelta = (node.MirrorX ^ node.MirrorY) ? -deltaAngle : deltaAngle;
+                node.Rotation += effectiveDelta;
+            }
+
+            VmStatus = ModelStatus.VisualChanged;
+            UpdateContentBounds();
+        }
+
+
+        private void MirrorNodeX(object? obj)
+        {
+            var targets = ResolveTargetNodes(obj);
+            if (targets.Count == 0) return;
+
+            foreach (var node in targets)
+                node.MirrorX = !node.MirrorX;
+
+            VmStatus = ModelStatus.VisualChanged;
+            UpdateContentBounds();
+        }
+
+        private void MirrorNodeY(object? obj)
+        {
+            var targets = ResolveTargetNodes(obj);
+            if (targets.Count == 0) return;
+
+            foreach (var node in targets)
+                node.MirrorY = !node.MirrorY;
+
+            VmStatus = ModelStatus.VisualChanged;
+            UpdateContentBounds();
+        }
+
+
 
         private void ShowNodeProperties(object? obj)
         {

@@ -418,6 +418,13 @@ namespace Smec.ViewModels
         public RelayCommand RemoveNodeCommand => field ??= new(RemoveNode, CanExecuteIfNotSimulating);
         public RelayCommand NodePropertiesCommand => field ??= new(ShowNodeProperties, CanExecuteIfNotSimulating);
 
+        public RelayCommand RotateNodesCWCommand => field ??= new(p => RotateNode(p, 90), CanTransformNode);
+        public RelayCommand RotateNodesCCWCommand => field ??= new(p => RotateNode(p, -90), CanTransformNode);
+        public RelayCommand MirrorNodesXCommand => field ??= new(MirrorNodeX, CanTransformNode);
+        public RelayCommand MirrorNodesYCommand => field ??= new(MirrorNodeY, CanTransformNode);
+
+
+
         // Команды рабочей области
         public RelayCommand SetGridPresetCommand => field ??= new(p => { if (p is GridPreset preset) CurrentGridPreset = preset; });
         public RelayCommand SetGridStyleCommand => field ??= new(p => { if (p is GridStyleMode style) CurrentGridStyle = style; });

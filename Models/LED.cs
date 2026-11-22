@@ -1,14 +1,23 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Runtime.Serialization;
 using System.Text;
 
 namespace Smec.Models
 {
+    [DataContract]
     public class LED : Diode
     {
 
         public override string CategoryName => nameof(LED);
         public override string SymbolId=> "LED_IEC";
+
+        public LED()
+        {
+            EnsureDefaultProperties();
+        }
+
+        public override void EnsureDefaultProperties() => ActiveColor = ActiveColor;
 
         public override void UpdateState(TimeSpan elapsed)
         {
@@ -21,10 +30,7 @@ namespace Smec.Models
             IsActive = anodeHigh && cathodeLowOrDriven;
         }
 
-        public override void Reset()
-        {
-            base.Reset();
-        }
+        
 
     }
 }

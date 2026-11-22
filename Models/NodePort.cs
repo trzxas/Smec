@@ -41,15 +41,18 @@ namespace Smec.Models
 
     public partial class NodePort : NamedBase, IOwnable<Node>, ICloneable
     {
-        private string _nodeId = string.Empty;
+
         /// <summary>
         /// Уникальный ID компонента (Node.Id), к которому подключён этот конец провода.
         /// </summary>
-        [DataMember]
+        [BsonIgnore]
+        [XmlIgnore]
+        [JsonIgnore]
+        [IgnoreDataMember]
         public string NodeId
         {
-            get => Owner?.Id ?? _nodeId;
-            set => _nodeId = value ?? string.Empty;
+            get => Owner?.Id ?? field;
+            set => field = value ?? string.Empty;
         }
 
         /// <summary>
@@ -61,6 +64,9 @@ namespace Smec.Models
         /// <summary>
         /// Удобная проверка, подключён ли порт к реальному узлу (или висит в воздухе).
         /// </summary>
+        [BsonIgnore]
+        [XmlIgnore]
+        [JsonIgnore]
         [IgnoreDataMember]
         public bool IsAttached => (Owner!=null) && !string.IsNullOrEmpty(PinNumber);
 
@@ -111,6 +117,9 @@ namespace Smec.Models
             }
         }
 
+        [BsonIgnore]
+        [XmlIgnore]
+        [JsonIgnore]
         [IgnoreDataMember]
         public bool IsDriving { get; set; }
 

@@ -52,6 +52,25 @@
                 </Style>
             </ContextMenu.Resources>
 
+            <MenuItem Header="Повернуть по часовой (90°)" InputGestureText="R"
+          Command="{Binding PlacementTarget.Tag.RotateNodesCWCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+          CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+
+            <MenuItem Header="Повернуть против часовой (-90°)" InputGestureText="Shift+R"
+          Command="{Binding PlacementTarget.Tag.RotateNodesCCWCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+          CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+
+            <Separator />
+
+            <MenuItem Header="Отразить по горизонтали" InputGestureText="X"
+          Command="{Binding PlacementTarget.Tag.MirrorNodesXCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+          CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+
+            <MenuItem Header="Отразить по вертикали" InputGestureText="Y"
+          Command="{Binding PlacementTarget.Tag.MirrorNodesYCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+          CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}" />
+
+            <Separator />
 
             <MenuItem Header="Клонировать"
                 Command="{Binding PlacementTarget.Tag.CloneNodeCommand, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
@@ -107,6 +126,10 @@
         <!-- Команды меню Edit -->
         <KeyBinding Key="Delete" Command="{Binding RemoveSelectedNodesCommand}" />
         <KeyBinding Key="Back" Command="{Binding RemoveSelectedNodesCommand}" />
+        <KeyBinding Key="R" Command="{Binding RotateNodesCWCommand}" />
+        <KeyBinding Modifiers="Shift" Key="R" Command="{Binding RotateNodesCCWCommand}" />
+        <KeyBinding Key="X" Command="{Binding MirrorNodesXCommand}" />
+        <KeyBinding Key="Y" Command="{Binding MirrorNodesYCommand}" />
 
         <!-- Команды масштабирования (Zoom) -->
         <KeyBinding Modifiers="Ctrl" Key="OemPlus" Command="{Binding ZoomInCommand}"/>
@@ -413,7 +436,7 @@
                                         </ControlTemplate>
                                     </Setter.Value>
                                 </Setter>
-                                
+
                                 <!-- Поднимаем выделенный провод и его ручку поверх остальных проводов -->
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding IsSelected}" Value="True">

@@ -39,10 +39,6 @@ namespace Smec.Models
             return (-1, PortState.Undefined);
         }
 
-        protected bool IsForwardConducting() =>
-            Ports.Count >= 2 &&
-            Ports[0].State is PortState.High or PortState.WeakHigh &&
-            Ports[1].State is PortState.Low or PortState.WeakLow;
     }
 }
 

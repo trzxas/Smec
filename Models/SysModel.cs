@@ -136,44 +136,6 @@ namespace Smec.Models
             node4.Location = new GridPoint(GetRandomInt(100), GetRandomInt(50));
             Nodes.Add(node4);
 
-            //var node = new OutlineNode() { Name = "CPU", Location = new Point(rnd.NextDouble() * 700, rnd.NextDouble() * 400) };
-            //node.Ports.Add(new NodePort() { Name = "L1", Side = SidePosition.Left, Decorator = PortDecorator.Slash });
-            //node.Ports.Add(new NodePort() { Name = "L2", Side = SidePosition.Left, Decorator = PortDecorator.BackSlash });
-            //node.Ports.Add(new NodePort() { Name = "L3", Side = SidePosition.Left, Decorator = PortDecorator.Arrow });
-            //node.Ports.Add(new NodePort() { Name = "R1", Side = SidePosition.Right });
-            //node.Ports.Add(new NodePort() { Name = "R2", Side = SidePosition.Right, Decorator = PortDecorator.Circle });
-            //node.Ports.Add(new NodePort() { Name = "T1", Side = SidePosition.Top });
-            //node.Ports.Add(new NodePort() { Name = "T2", Side = SidePosition.Top, Decorator = PortDecorator.Arrow });
-            //node.Ports.Add(new NodePort() { Name = "", Side = SidePosition.Top, Decorator = PortDecorator.Slash });
-            //node.Ports.Add(new NodePort() { Name = "", Side = SidePosition.Top });
-            //node.Ports.Add(new NodePort() { Name = "B1", Side = SidePosition.Bottom });
-            //node.Ports.Add(new NodePort() { Name = "", Side = SidePosition.Bottom, Decorator = PortDecorator.Circle });
-
-            ////node.Ports.Add(new NodePort() { Name = "", Side = SidePosition.LeftTop });
-            ////node.Ports.Add(new NodePort() { Name = "", Side = SidePosition.LeftTop });
-            ////node.Ports.Add(new NodePort() { Name = "", Side = SidePosition.RightTop });
-            ////node.Ports.Add(new NodePort() { Name = "", Side = SidePosition.RightTop });
-            ////node.Ports.Add(new NodePort() { Name = "", Side = SidePosition.LeftBottom });
-            ////node.Ports.Add(new NodePort() { Name = "", Side = SidePosition.LeftBottom });
-            ////node.Ports.Add(new NodePort() { Name = "", Side = SidePosition.RightBottom });
-            ////node.Ports.Add(new NodePort() { Name = "", Side = SidePosition.RightBottom });
-
-            ////node.Ports.Add(new NodePort() { Name = "", Side = SidePosition.TopLeft });
-            ////node.Ports.Add(new NodePort() { Name = "", Side = SidePosition.TopLeft });
-            ////node.Ports.Add(new NodePort() { Name = "", Side = SidePosition.TopRight });
-            ////node.Ports.Add(new NodePort() { Name = "", Side = SidePosition.TopRight });
-            ////node.Ports.Add(new NodePort() { Name = "", Side = SidePosition.BottomLeft });
-            ////node.Ports.Add(new NodePort() { Name = "", Side = SidePosition.BottomLeft });
-            ////node.Ports.Add(new NodePort() { Name = "", Side = SidePosition.BottomRight });
-            ////node.Ports.Add(new NodePort() { Name = "", Side = SidePosition.BottomRight });
-
-            //node.Ports.Add(new NodePort() { Name = "LTC", Side = SidePosition.LeftTopCorner });
-            //node.Ports.Add(new NodePort() { Name = "RTC", Side = SidePosition.RightTopCorner });
-            //node.Ports.Add(new NodePort() { Name = "LBC", Side = SidePosition.LeftBottomCorner });
-            //node.Ports.Add(new NodePort() { Name = "RBC", Side = SidePosition.RightBottomCorner });
-            //Nodes.Add(node);
-
-
             Links.Add(new Link() { Name = "Link1", PortA = Nodes[0].Ports[2], PortB = Nodes[1].Ports[0] });
             Links.Add(new Link() { Name = "Link2", PortA = Nodes[1].Ports[2], PortB = Nodes[2].Ports[0] });
             Links.Add(new Link() { Name = "Link3", PortA = Nodes[1].Ports[3], PortB = Nodes[3].Ports[0] });

@@ -9,7 +9,7 @@ using System.Xml.Serialization;
 namespace Smec.Models
 {
     [DataContract]
-    public class NamedBase :ObservableObject
+    public class NamedBase : ObservableObject
     {
         [JsonPropertyOrder(-1)]
         [XmlAttribute] // attribute ignored with DataContract 
@@ -22,8 +22,6 @@ namespace Smec.Models
         } = String.Empty;
 
 
-        
-        public SidePosition NamePosition { get; set; } = SidePosition.Top;
 
         [XmlIgnore]
         [BsonIgnore]

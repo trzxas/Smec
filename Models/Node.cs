@@ -1,10 +1,16 @@
 ﻿using MongoDB.Bson.Serialization.Attributes;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
+using System.Globalization;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Runtime.Serialization;
 using System.Text.Json.Serialization;
+using System.Windows.Media;
+using System.Xml.Linq;
 using System.Xml.Serialization;
+using Color = System.Windows.Media.Color;
+using ColorConverter = System.Windows.Media.ColorConverter;
 
 namespace Smec.Models
 {
@@ -66,55 +72,159 @@ namespace Smec.Models
         /// <summary>
         /// Позиционное обозначение на схеме (например: "R1", "U3", "C12").
         /// </summary>
-        private string? _designator;
+
         public string Designator
         {
             // Если префикс задан — формируем "R?", "C?"; если префикс пустой (как у GND) — оставляем пустую строку ""
-            get => _designator ??= string.IsNullOrWhiteSpace(DefaultPrefix) ? string.Empty : $"{DefaultPrefix}?";
+            get => field ??= string.IsNullOrWhiteSpace(DefaultPrefix) ? string.Empty : $"{DefaultPrefix}?";
 
             // Если передали пустую строку (стерли в UI), сбрасываем в дефолт (или в пустую строку при отсутствии префикса)
             set
             {
                 string defaultVal = string.IsNullOrWhiteSpace(DefaultPrefix) ? string.Empty : $"{DefaultPrefix}?";
-                SetProperty(ref _designator, string.IsNullOrWhiteSpace(value) ? defaultVal : value);
+                SetProperty(ref field, string.IsNullOrWhiteSpace(value) ? defaultVal : value);
             }
         }
-
-
-        // Удобное свойство для проверки, присвоен ли узлу реальный номер или он еще дефолтный
-        public bool IsDefaultDesignator => Designator == $"{DefaultPrefix}?";
-
 
 
         /// <summary>
         /// Номинал или значение элемента (например: "10k", "100n", "5V", "GND").
         /// </summary>
-        public string Value { get; set => SetProperty(ref field, value); } = string.Empty;
+        [BsonIgnore]
+        [XmlIgnore]
+        [JsonIgnore]
+        [IgnoreDataMember]
+        public string Value
+        {
+            get;
+            set
+            {
+                if (SetProperty(ref field, value) && !_isSyncingValue)
+                    OnValueEdited(value);
+            }
+        } = string.Empty;
+
+        private bool _isSyncingValue;
+
+        /// <summary>
+        /// Переопределяется в наследниках для формирования подписи на схеме (например, "1 kΩ", "10 µF").
+        /// </summary>
+        protected virtual string FormatDisplayValue() => string.Empty;
+
+        protected void RefreshDisplayValue()
+        {
+            _isSyncingValue = true;
+            try
+            {
+                Value = FormatDisplayValue();
+            }
+            finally
+            {
+                _isSyncingValue = false;
+            }
+        }
+
+        /// <summary>
+        /// Обновляет отображаемую строку Value на схеме без повторного вызова парсера.
+        /// </summary>
+        protected void UpdateFormattedValue(string formatted)
+        {
+            _isSyncingValue = true;
+            try
+            {
+                Value = formatted;
+            }
+            finally
+            {
+                _isSyncingValue = false;
+            }
+        }
+
+        /// <summary>
+        /// Переопределяется в наследниках для разбора ручного ввода в поле Value (например, "10k" -> Resistance = 10000).
+        /// </summary>
+        protected virtual void OnValueEdited(string newValue) { }
+
+
 
         /// <summary>
         /// Дополнительные параметры (например, для SPICE-моделей, частоты генератора или пользовательских полей).
         /// </summary>
-        //TODO Пока никак не использовался!
+
         public Dictionary<string, string> Properties { get; set; } = [];
 
+        protected string GetStringProperty(string key, string defaultValue) =>
+            Properties != null && Properties.TryGetValue(key, out var val) && !string.IsNullOrWhiteSpace(val)
+        ? val
+        : defaultValue;
 
+        protected void SetStringProperty(string key, string value, [CallerMemberName] string? propertyName = null)
+        {
+            Properties ??= [];
+            if (Properties.TryGetValue(key, out var existing) && existing == value)
+                return;
+
+            Properties[key] = value;
+            OnPropertyChanged(propertyName);
+        }
+
+        protected double GetDoubleProperty(string key, double defaultValue)
+        {
+            if (Properties != null && Properties.TryGetValue(key, out var raw) &&
+                double.TryParse(raw, NumberStyles.Float, CultureInfo.InvariantCulture, out var val))
+            {
+                return val;
+            }
+            return defaultValue;
+        }
+
+        protected void SetDoubleProperty(string key, double value, [CallerMemberName] string? propertyName = null)
+        {
+            Properties ??= [];
+            string formatted = value.ToString(CultureInfo.InvariantCulture);
+
+            if (!Properties.TryGetValue(key, out var existing) || existing != formatted)
+            {
+                Properties[key] = formatted;
+                OnPropertyChanged(propertyName);
+            }
+
+            RefreshDisplayValue();
+        }
 
         /// <summary>
         /// Универсальное состояние активности элемента (свечение LED, срабатывание реле, замыкание кнопки).
         /// </summary>
+        [BsonIgnore]
+        [XmlIgnore]
+        [JsonIgnore]
+        [IgnoreDataMember]
         public bool IsActive
         {
             get;
             set => SetProperty(ref field, value);
         } = false;
 
-        [DataMember]
-        public string ActiveColor
+        [BsonIgnore]
+        [XmlIgnore]
+        [JsonIgnore]
+        [IgnoreDataMember]
+        public Color ActiveColor
         {
-            get;
-            set => SetProperty(ref field, value);
+            get
+            {
+                string hex = GetStringProperty("ActiveColor", "#FFFF2D2D");
+                try
+                {
+                    return (Color)ColorConverter.ConvertFromString(hex);
+                }
+                catch
+                {
+                    return Color.FromRgb(255, 45, 45);
+                }
+            }
+            set => SetStringProperty("ActiveColor", value.ToString());
         }
-        = "#FF2D2D"; // По умолчанию красный (можно менять для разных индикаторов)
 
         [BsonIgnore]
         [XmlIgnore]
@@ -149,7 +259,10 @@ namespace Smec.Models
         }
 
 
-
+        /// <summary>
+        /// Заполняет словарь Properties параметрами по умолчанию, если их ещё нет.
+        /// </summary>
+        public virtual void EnsureDefaultProperties() { }
 
 
         // Конструктор
@@ -237,7 +350,7 @@ namespace Smec.Models
             }
 
             // 2. Если номер уже назначен (например, схема загружена из файла) — не трогаем его
-            if (!string.IsNullOrWhiteSpace(_designator) && !_designator.EndsWith('?'))
+            if (!string.IsNullOrWhiteSpace(Designator) && !Designator.EndsWith('?'))
                 return;
 
             // 3. Собираем все занятые номера для данного префикса (D1, D2, ...)
@@ -317,6 +430,7 @@ namespace Smec.Models
             if (Activator.CreateInstance(type) is Node instance)
             {
                 instance.CreatePorts();
+                instance.EnsureDefaultProperties();
                 return instance;
             }
             return null;

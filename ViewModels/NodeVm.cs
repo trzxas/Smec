@@ -18,11 +18,14 @@ namespace Smec.ViewModels
         public Geometry BodyGeometry { get; private set; } = Geometry.Empty;
         public ObservableCollection<PinVm> Pins { get; } = [];
 
-        // Зона захвата мышкой (HitBox) в пикселях
-        public double HitBoxX => -(_symbolDef.Width / 2.0) * _gridSettings.GridSize;
-        public double HitBoxY => -(_symbolDef.Height / 2.0) * _gridSettings.GridSize;
-        public double HitBoxWidth => _symbolDef.Width * _gridSettings.GridSize;
-        public double HitBoxHeight => _symbolDef.Height * _gridSettings.GridSize;
+        private bool IsRotated90Or270 => (Rotation % 180) != 0;
+
+        // Зона захвата мышкой (HitBox) в пикселях с учётом поворота на 90° и 270°
+        public double HitBoxWidth => (IsRotated90Or270 ? _symbolDef.Height : _symbolDef.Width) * _gridSettings.GridSize;
+        public double HitBoxHeight => (IsRotated90Or270 ? _symbolDef.Width : _symbolDef.Height) * _gridSettings.GridSize;
+        public double HitBoxX => -HitBoxWidth / 2.0;
+        public double HitBoxY => -HitBoxHeight / 2.0;
+
 
         // Позиция центра (0, 0) элемента на холсте в пикселях (с привязкой к сетке)
         public double PixelX
@@ -62,9 +65,9 @@ namespace Smec.ViewModels
             get
             {
                 var group = new TransformGroup();
-                group.Children.Add(new ScaleTransform(ScaleX, ScaleY));
                 group.Children.Add(new RotateTransform(Rotation));
-                group.Freeze(); // Замораживаем для максимальной производительности WPF!
+                group.Children.Add(new ScaleTransform(ScaleX, ScaleY));
+                group.Freeze();
                 return group;
             }
         }
@@ -80,12 +83,11 @@ namespace Smec.ViewModels
                 {
                     Model.Rotation = normalized;
                     OnPropertyChanged();
-                    OnPropertyChanged(nameof(GraphicsTransform)); // <-- Обновляем трансформацию!
-                    UpdateLabelOffsets();
-                    NotifyPositionChanged();
+                    OnTransformChanged();
                 }
             }
         }
+
         public bool MirrorX
         {
             get => Model.MirrorX;
@@ -95,9 +97,8 @@ namespace Smec.ViewModels
                 {
                     Model.MirrorX = value;
                     OnPropertyChanged();
-                    OnPropertyChanged(nameof(ScaleX)); // Уведомляем XAML ScaleTransform!
-                    OnPropertyChanged(nameof(GraphicsTransform)); // <-- Обновляем трансформацию!
-                    NotifyPositionChanged();           // Пересчитываем координаты подключённых проводов
+                    OnPropertyChanged(nameof(ScaleX));
+                    OnTransformChanged();
                 }
             }
         }
@@ -111,12 +112,24 @@ namespace Smec.ViewModels
                 {
                     Model.MirrorY = value;
                     OnPropertyChanged();
-                    OnPropertyChanged(nameof(ScaleY)); // Уведомляем XAML ScaleTransform!
-                    OnPropertyChanged(nameof(GraphicsTransform)); // <-- Обновляем трансформацию!
-                    NotifyPositionChanged();           // Пересчитываем координаты подключённых проводов
+                    OnPropertyChanged(nameof(ScaleY));
+                    OnTransformChanged();
                 }
             }
         }
+
+        private void OnTransformChanged()
+        {
+            OnPropertyChanged(nameof(GraphicsTransform));
+            OnPropertyChanged(nameof(HitBoxX));
+            OnPropertyChanged(nameof(HitBoxY));
+            OnPropertyChanged(nameof(HitBoxWidth));
+            OnPropertyChanged(nameof(HitBoxHeight));
+            UpdateLabelOffsets();
+            UpdateBounds();
+            NotifyPositionChanged();
+        }
+
 
         // Свойства для привязки в XAML: <ScaleTransform ScaleX="{Binding ScaleX}" ScaleY="{Binding ScaleY}" />
         public double ScaleX => Model.MirrorX ? -1.0 : 1.0;
@@ -278,33 +291,47 @@ namespace Smec.ViewModels
             //UpdatePixelPosition();
         }
 
-        // Настройка отступов от корпуса
-        private void UpdateLabelOffsets()
+        private Rect GetTransformedBodyBounds()
         {
             double grid = _gridSettings.GridSize;
             Rect bounds = BodyGeometry.Bounds;
 
-            // Защита: если геометрия ещё пуста, берём базовый квадрат 1x1 клетку вокруг центра (0, 0)
             if (bounds.IsEmpty || bounds.Width == 0 || bounds.Height == 0)
-            {
                 bounds = new Rect(-grid * 0.5, -grid * 0.5, grid, grid);
-            }
-            else if (Rotation == 90 || Rotation == 270)
+
+            return GraphicsTransform.TransformBounds(bounds);
+        }
+
+        // Настройка отступов от корпуса
+        private void UpdateLabelOffsets()
+        {
+            Rect bounds = GetTransformedBodyBounds();
+
+            if (IsRotated90Or270)
             {
-                bounds = new Rect(bounds.Top, bounds.Left, bounds.Height, bounds.Width);
+                double rightOffset = 4;
+                double centerY = (bounds.Top + bounds.Bottom) / 2.0;
+
+                DesignatorOffsetX = bounds.Right + rightOffset;
+                DesignatorOffsetY = centerY - 12;
+
+                ValueOffsetX = bounds.Right + rightOffset;
+                ValueOffsetY = centerY + 1;
+            }
+            else
+            {
+                // При горизонтальном положении (0° / 180°) выводы слева и справа —
+                // располагаем обозначение над корпусом, а номинал под ним
+                double topOffset = 12;
+                DesignatorOffsetX = bounds.Left;
+                DesignatorOffsetY = bounds.Top - topOffset;
+
+                double bottomOffset = 2;
+                ValueOffsetX = bounds.Left;
+                ValueOffsetY = bounds.Bottom + bottomOffset;
             }
 
-            // 1. Позиционное обозначение (D3) над верхней гранью
-            double topOffset = 12; // Смещение надписи относительно верха
-            DesignatorOffsetX = bounds.Left;
-            DesignatorOffsetY = bounds.Top - topOffset;
-
-            // 2. Номинал под нижней гранью
-            double bottomOffset = 2; // Смещение надписи относительно низа
-            ValueOffsetX = bounds.Left;
-            ValueOffsetY = bounds.Bottom + bottomOffset;
-
-            // 3. Рамка для знака функции (≥1) прижимается к ВЕРХНЕЙ грани корпуса!
+            // Рамка для знака функции (≥1) прижимается к верхней грани корпуса
             FuncBoxX = bounds.Left;
             FuncBoxY = bounds.Top;
             FuncBoxWidth = bounds.Width;
@@ -321,6 +348,7 @@ namespace Smec.ViewModels
         }
 
 
+
         public void RefreshLabels()
         {
             OnPropertyChanged(nameof(Value));
@@ -329,33 +357,80 @@ namespace Smec.ViewModels
 
         private void UpdateBounds()
         {
-            Rect totalBounds = BodyGeometry.Bounds;
-            if (totalBounds.IsEmpty)
+            Rect localBounds = BodyGeometry.Bounds;
+            if (localBounds.IsEmpty)
             {
                 double grid = _gridSettings.GridSize;
-                totalBounds = new Rect(-grid * 0.5, -grid * 0.5, grid, grid);
+                localBounds = new Rect(-grid * 0.5, -grid * 0.5, grid, grid);
             }
 
-            // Расширяем границы, чтобы в них гарантированно вошли все выводы (Pins)
             foreach (var pin in Pins)
             {
-                totalBounds.Union(new Point(pin.X1, pin.Y1));
-                totalBounds.Union(new Point(pin.X2, pin.Y2));
+                localBounds.Union(new Point(pin.X1, pin.Y1));
+                localBounds.Union(new Point(pin.X2, pin.Y2));
             }
 
-            // Добавляем небольшой отступ (4 px с каждой стороны) под толщину линий и кружки инверсии
+            // Применяем текущие зеркалирование и поворот ко всему прямоугольнику
+            Rect totalBounds = GraphicsTransform.TransformBounds(localBounds);
             totalBounds.Inflate(4, 4);
 
             TotalWidth = totalBounds.Width;
             TotalHeight = totalBounds.Height;
-            HalfWidth = -totalBounds.Left; // Сдвиг центра (0, 0) от левого края
-            HalfHeight = -totalBounds.Top; // Сдвиг центра (0, 0) от верхнего края
+            HalfWidth = -totalBounds.Left;
+            HalfHeight = -totalBounds.Top;
 
             OnPropertyChanged(nameof(TotalWidth));
             OnPropertyChanged(nameof(TotalHeight));
             OnPropertyChanged(nameof(HalfWidth));
             OnPropertyChanged(nameof(HalfHeight));
+            OnPropertyChanged(nameof(ContainerLeft));
+            OnPropertyChanged(nameof(ContainerTop));
         }
+
+
+        public SidePosition GetEffectivePinSide(string pinNumber)
+        {
+            var port = Model.Ports.FirstOrDefault(p => p.PinNumber == pinNumber);
+            if (port == null) return SidePosition.Right;
+
+            SidePosition side = port.Side;
+
+            if (Model.MirrorX)
+            {
+                side = side switch
+                {
+                    SidePosition.Left => SidePosition.Right,
+                    SidePosition.Right => SidePosition.Left,
+                    _ => side
+                };
+            }
+
+            if (Model.MirrorY)
+            {
+                side = side switch
+                {
+                    SidePosition.Top => SidePosition.Bottom,
+                    SidePosition.Bottom => SidePosition.Top,
+                    _ => side
+                };
+            }
+
+            int steps = (((Model.Rotation % 360) + 360) % 360) / 90;
+            for (int i = 0; i < steps; i++)
+            {
+                side = side switch
+                {
+                    SidePosition.Top => SidePosition.Right,
+                    SidePosition.Right => SidePosition.Bottom,
+                    SidePosition.Bottom => SidePosition.Left,
+                    SidePosition.Left => SidePosition.Top,
+                    _ => side
+                };
+            }
+
+            return side;
+        }
+
 
         /// <summary>
         /// Вычисляет мировые пиксельные координаты конкретного пина на холсте (для привязки проводов).
@@ -366,18 +441,10 @@ namespace Smec.ViewModels
             if (pin == null)
                 return new Point(PixelX, PixelY);
 
-            double lx = pin.X2;
-            double ly = pin.Y2;
-
-            if (Model.MirrorX) lx = -lx;
-            if (Model.MirrorY) ly = -ly;
-
-            double rad = Model.Rotation * Math.PI / 180.0;
-            double rotX = lx * Math.Cos(rad) - ly * Math.Sin(rad);
-            double rotY = lx * Math.Sin(rad) + ly * Math.Cos(rad);
-
-            return new Point(PixelX + rotX, PixelY + rotY);
+            Point transformed = GraphicsTransform.Transform(new Point(pin.X2, pin.Y2));
+            return new Point(PixelX + transformed.X, PixelY + transformed.Y);
         }
+
 
         private void NotifyPositionChanged() => TransformChanged?.Invoke();
 
