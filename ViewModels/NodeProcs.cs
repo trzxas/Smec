@@ -171,6 +171,7 @@ namespace Smec.ViewModels
                 return false;
             }
 
+            //TODO  добавить к горячим клавишам поворота и отражения Ctrl
             if (Keyboard.FocusedElement is TextBox)
             {
                 return false;

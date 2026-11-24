@@ -162,6 +162,7 @@ namespace Smec.Models
                 Side = this.Side,
                 Mode = this.Mode,
                 Decorator = this.Decorator,
+                PinNumber=this.PinNumber,
             };
         }
 
